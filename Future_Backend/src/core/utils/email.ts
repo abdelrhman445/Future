@@ -1,16 +1,20 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import { config } from '../../config';
 import { logger } from './logger';
 
-// يتم جلب المفتاح من متغيرات البيئة (Environment Variables)
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  host: config.email.host,
+  port: config.email.port,
+  secure: config.email.secure,
+  auth: config.email.user ? {
+    user: config.email.user,
+    pass: config.email.pass,
+  } : undefined,
+});
 
-/**
- * إرسال كود التحقق (OTP) عند التسجيل
- */
 export async function sendOtpEmail(to: string, otp: string, firstName: string): Promise<void> {
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; direction: rtl; text-align: right;">
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h2 style="color: #333;">مرحباً ${firstName}!</h2>
       <p>كود التحقق الخاص بك هو:</p>
       <div style="background: #f4f4f4; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
@@ -24,26 +28,21 @@ export async function sendOtpEmail(to: string, otp: string, firstName: string): 
   try {
     if (config.server.isDev) {
       logger.info(`[DEV] OTP Email to ${to}: ${otp}`);
+      // return; // 🛑 تم تعطيل هذا السطر لكي يتم إرسال الإيميل الفعلي حتى في وضع التطوير
     }
     
-    // استخدام Resend API بدلاً من SMTP
-    await resend.emails.send({
-      from: 'Future Academy <onboarding@resend.dev>', // ملاحظة: غير هذا لبريدك الرسمي بعد توثيق الدومين
-      to: [to],
+    await transporter.sendMail({
+      from: config.email.from,
+      to,
       subject: 'كود التحقق - منصة الكورسات',
-      html: html,
+      html,
     });
-
-    logger.info(`✅ OTP Email sent successfully to ${to}`);
   } catch (err) {
     logger.error('Failed to send OTP email', { error: err, to });
     throw new Error('Failed to send verification email');
   }
 }
 
-/**
- * إرسال دعوة عرض تقديمي
- */
 export async function sendPresentationInviteEmail(
   to: string,
   recipientName: string,
@@ -53,10 +52,10 @@ export async function sendPresentationInviteEmail(
   scheduledAt?: Date
 ): Promise<void> {
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; direction: rtl; text-align: right;">
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h2 style="color: #333;">مرحباً ${recipientName}!</h2>
       <p>لديك دعوة عرض تقديمي من <strong>${senderName}</strong></p>
-      <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; border-right: 4px solid #007bff;">
+      <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #007bff;">
         <h3>${title}</h3>
         ${message ? `<p>${message}</p>` : ''}
         ${scheduledAt ? `<p><strong>الموعد:</strong> ${scheduledAt.toLocaleString('ar-EG')}</p>` : ''}
@@ -68,16 +67,15 @@ export async function sendPresentationInviteEmail(
   try {
     if (config.server.isDev) {
       logger.info(`[DEV] Presentation invite email to ${to}`);
+      // return; // 🛑 تم تعطيل هذا السطر لكي يتم إرسال الإيميل الفعلي حتى في وضع التطوير
     }
     
-    await resend.emails.send({
-      from: 'Future Academy <onboarding@resend.dev>',
-      to: [to],
+    await transporter.sendMail({
+      from: config.email.from,
+      to,
       subject: `دعوة عرض تقديمي: ${title}`,
-      html: html,
+      html,
     });
-
-    logger.info(`✅ Presentation invite email sent to ${to}`);
   } catch (err) {
     logger.error('Failed to send presentation invite email', { error: err });
   }

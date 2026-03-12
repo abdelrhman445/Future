@@ -10,7 +10,7 @@ function getStripe(): Stripe {
     if (!config.stripe.secretKey || config.stripe.secretKey.startsWith('sk_test_XXXX')) {
       throw new Error('Stripe secret key not configured. Add STRIPE_SECRET_KEY to .env');
     }
-    _stripe = new Stripe(config.stripe.secretKey, { apiVersion: '2023-10-16' as any, });
+    _stripe = new Stripe(config.stripe.secretKey, { apiVersion: '2024-06-20' });
   }
   return _stripe;
 }

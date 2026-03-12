@@ -54,10 +54,9 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const skip = (page - 1) * limit;
     const packageType = req.query.package as string;
 
-    // 🔴 التعديل تم هنا (ضفنا any وشلنا as never)
-    const where: any = {
+    const where = {
       status: 'PUBLISHED',
-      ...(packageType && { packageType }),
+      ...(packageType && { packageType: packageType as never }),
     };
 
     const [courses, total] = await Promise.all([

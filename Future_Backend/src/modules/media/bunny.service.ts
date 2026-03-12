@@ -123,11 +123,9 @@ export async function getVideoStatus(videoId: string) {
     throw new Error(await res.text());
   }
 
-  // 🔴 التعديل الأول هنا
-  const data: any = await res.json();
+  const data = await res.json();
 
-  // 🔴 التعديل التاني هنا
-  const statusMap: any = {
+  const statusMap = {
     0: "queued",
     1: "processing",
     2: "encoding",

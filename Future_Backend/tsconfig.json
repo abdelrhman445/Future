@@ -5,8 +5,7 @@
     "lib": ["ES2020"],
     "outDir": "./dist",
     "rootDir": "./src",
-    "strict": false,            // 🔴 غيرناها من true لـ false
-    "noImplicitAny": false,      // 🔴 ضفنا السطر ده عشان يوافق على any
+    "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
