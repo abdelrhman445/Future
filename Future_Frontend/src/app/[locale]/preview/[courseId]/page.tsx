@@ -1,0 +1,298 @@
+'use client';
+
+import { useEffect, useState, useRef } from 'react';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
+import {
+  Box, Container, Typography, Grid, Card, List, ListItemButton, ListItemText,
+  CircularProgress, alpha, Chip, Button
+} from '@mui/material';
+import { 
+  LockRounded, PlayCircleOutlineRounded, MenuBookRounded, ShieldRounded,
+  ShoppingCartRounded
+} from '@mui/icons-material';
+import { motion, AnimatePresence } from 'framer-motion';
+
+import Navbar from '@/components/layout/Navbar';
+import { coursesApi, mediaApi } from '@/lib/api';
+import { useAuthStore } from '@/store/auth.store';
+import toast from 'react-hot-toast';
+
+// ================= THEME PALETTE =================
+const palette = {
+  bg: '#0a0a0f',
+  cardBg: '#084570',
+  border: '#259acb',
+  primary: '#30c0f2',
+  primaryHover: '#83d9f7',
+  textMain: '#a8eff9',
+  textSec: '#a0ddf1',
+  success: '#4ade80',
+  locked: '#3f3f46' // لون رمادي غامق جداً للأقفال
+};
+
+// ================= ANIMATION VARIANTS =================
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 100 } }
+};
+
+export default function PreviewPlayerPage() {
+  const { locale, courseId } = useParams() as { locale: string, courseId: string };
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const initialLessonId = searchParams.get('lessonId');
+  const ar = locale === 'ar';
+  const { user } = useAuthStore(); 
+
+  const [course, setCourse] = useState<any>(null);
+  const [sections, setSections] = useState<any[]>([]);
+  const [activeLesson, setActiveLesson] = useState<any>(null);
+  const [videoUrl, setVideoUrl] = useState('');
+  const [loading, setLoading] = useState(true);
+  
+  const [watermarkPos, setWatermarkPos] = useState({ top: '10%', left: '10%' });
+
+  const studentIdentifier = user ? `${user.firstName} ${user.lastName} - ${user.email}` : "Free Preview - Guest";
+
+  // 1. الحماية من الكليك يمين واختصارات الكيبورد
+  useEffect(() => {
+    loadCourse();
+
+    const moveWatermark = setInterval(() => {
+      const top = Math.floor(Math.random() * 75) + 10;
+      const left = Math.floor(Math.random() * 70) + 10;
+      setWatermarkPos({ top: `${top}%`, left: `${left}%` });
+    }, 4000);
+
+    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I', 'i', 'C', 'c', 'J', 'j'].includes(e.key)) || (e.ctrlKey && ['U', 'u', 'S', 's', 'P', 'p'].includes(e.key))) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      clearInterval(moveWatermark);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  const loadCourse = async () => {
+    try {
+      const res = await coursesApi.getContent(courseId);
+      const data = res.data?.data || res.data;
+      setCourse(data.course);
+      setSections(data.sections || []);
+      
+      let targetLesson = null;
+      if (initialLessonId) {
+        for (const sec of (data.sections || [])) {
+          const found = sec.lessons.find((l: any) => l.id === initialLessonId);
+          if (found && found.isFreePreview) targetLesson = found;
+        }
+      }
+      
+      if (!targetLesson) {
+        for (const sec of (data.sections || [])) {
+          const freeLesson = sec.lessons.find((l: any) => l.isFreePreview);
+          if (freeLesson) { targetLesson = freeLesson; break; }
+        }
+      }
+
+      if (targetLesson) {
+        selectLesson(targetLesson);
+      } else {
+        toast.error(ar ? 'لا توجد دروس مجانية للمعاينة في هذا الكورس' : 'No free preview lessons available');
+      }
+    } catch (err) { console.log(err); }
+    setLoading(false);
+  };
+
+  const selectLesson = async (lesson: any) => {
+    if (!lesson.isFreePreview) {
+      toast.error(ar ? '🔒 هذا الدرس متاح للمشتركين فقط. قم بشراء الكورس للمشاهدة.' : '🔒 This lesson is for subscribers only. Buy the course to watch.');
+      return;
+    }
+
+    setActiveLesson(lesson);
+    setVideoUrl(''); 
+    
+    try {
+      const res = await mediaApi.getStreamUrl(lesson.id);
+      const embedUrl = res.data?.data?.streamUrl || res.data?.data?.embedUrl || res.data?.embedUrl || res.data?.streamUrl;
+      setVideoUrl(embedUrl);
+    } catch (err) { console.log(err); }
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ minHeight: '100vh', background: palette.bg, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <CircularProgress size={60} thickness={4} sx={{ color: palette.primary }} />
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ minHeight: '100vh', background: palette.bg, userSelect: 'none', WebkitUserSelect: 'none', position: 'relative', overflow: 'hidden' }} onDragStart={(e) => e.preventDefault()}>
+      {/* Background Glow Effect */}
+      <Box sx={{ position: 'absolute', top: '-10%', left: '50%', transform: 'translateX(-50%)', width: '60vw', height: '60vw', background: `radial-gradient(circle, ${alpha(palette.primary, 0.08)} 0%, transparent 60%)`, filter: 'blur(100px)', zIndex: 0, pointerEvents: 'none' }} />
+      
+      <Navbar />
+
+      <Container maxWidth="xl" sx={{ py: { xs: 4, md: 5 }, position: 'relative', zIndex: 1 }}>
+        <Box component={motion.div} initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
+          sx={{ mb: 5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 3 }}>
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
+            <Box sx={{ p: 2, borderRadius: 4, background: `linear-gradient(135deg, ${alpha(palette.primary, 0.15)}, ${alpha(palette.border, 0.05)})`, border: `1px solid ${alpha(palette.primary, 0.3)}`, boxShadow: `0 0 20px ${alpha(palette.primary, 0.1)}` }}>
+              <MenuBookRounded sx={{ color: palette.primary, fontSize: 36 }} />
+            </Box>
+            <Box>
+              <Typography variant="h4" sx={{ fontWeight: 900, color: '#fff', letterSpacing: '-0.5px' }}>{ar ? 'معاينة مجانية:' : 'Free Preview:'} <span style={{ color: palette.primary }}>{course?.title}</span></Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.8 }}>
+                <ShieldRounded sx={{ color: palette.success, fontSize: 18 }} />
+                <Typography sx={{ color: palette.textSec, fontSize: '0.9rem', fontWeight: 700 }}>Protected Preview Environment</Typography>
+              </Box>
+            </Box>
+          </Box>
+
+          <Button 
+            onClick={() => router.push(`/${locale}/courses/${course?.slug}`)}
+            variant="contained" startIcon={<ShoppingCartRounded />}
+            component={motion.button} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+            sx={{ 
+              background: `linear-gradient(135deg, ${palette.success}, #16a34a)`, color: '#000', 
+              fontWeight: 900, py: 1.5, px: 4, borderRadius: 4, fontSize: '1.05rem',
+              boxShadow: `0 10px 30px ${alpha(palette.success, 0.4)}`,
+              '&:hover': { background: `linear-gradient(135deg, #16a34a, #15803d)` } 
+            }}
+          >
+            {ar ? 'فتح الكورس بالكامل' : 'Unlock Full Course'}
+          </Button>
+        </Box>
+
+        <Grid container spacing={4} component={motion.div} variants={containerVariants} initial="hidden" animate="visible">
+          {/* ================= VIDEO AREA ================= */}
+          <Grid item xs={12} lg={8} component={motion.div} variants={itemVariants}>
+            <Card sx={{ background: `linear-gradient(180deg, rgba(8, 69, 112, 0.4) 0%, rgba(10, 10, 15, 0.9) 100%)`, backdropFilter: 'blur(20px)', border: `1px solid ${alpha(palette.border, 0.3)}`, borderRadius: 6, overflow: 'hidden', boxShadow: `0 30px 60px rgba(0,0,0,0.6)` }}>
+              
+              <Box sx={{ aspectRatio: '16/9', background: '#000', position: 'relative', overflow: 'hidden' }}>
+                <AnimatePresence mode="wait">
+                  {videoUrl ? (
+                    <Box component={motion.div} key="video" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} sx={{ width: '100%', height: '100%' }}>
+                      <iframe
+                        src={`${videoUrl}${videoUrl.includes('?') ? '&' : '?'}rel=0&modestbranding=1&showinfo=0&controls=1&fs=1`}
+                        className="w-full h-full"
+                        style={{ width: '100%', height: '100%', border: 'none' }}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+
+                      {/* العلامة المائية */}
+                      <Box sx={{ position: 'absolute', top: watermarkPos.top, left: watermarkPos.left, color: 'rgba(255, 255, 255, 0.2)', fontSize: 'clamp(14px, 2vw, 22px)', fontWeight: 900, pointerEvents: 'none', transition: 'all 1s ease-in-out', textShadow: '2px 2px 4px rgba(0,0,0,0.9)', zIndex: 10, backgroundColor: 'rgba(0,0,0,0.3)', padding: '6px 16px', borderRadius: 3, backdropFilter: 'blur(4px)' }}>
+                        {studentIdentifier}
+                      </Box>
+
+                      {/* الدروع الذكية */}
+                      <Box onContextMenu={(e) => e.preventDefault()} sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: '50px', background: 'transparent', zIndex: 5 }} />
+                      <Box onContextMenu={(e) => e.preventDefault()} sx={{ position: 'absolute', bottom: 0, right: 0, width: '90px', height: '50px', background: 'transparent', zIndex: 5 }} />
+                    </Box>
+                  ) : (
+                    <Box component={motion.div} key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 3, background: 'rgba(8,69,112,0.1)' }}>
+                      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 4, ease: "linear" }}>
+                        <PlayCircleOutlineRounded sx={{ fontSize: 80, color: alpha(palette.primary, 0.3) }} />
+                      </motion.div>
+                      <Typography color={palette.textSec} sx={{ fontWeight: 700, fontSize: '1.2rem', letterSpacing: 1 }}>
+                        {ar ? 'جاري تحضير الدرس المجاني...' : 'Preparing free preview...'}
+                      </Typography>
+                    </Box>
+                  )}
+                </AnimatePresence>
+              </Box>
+
+              <Box sx={{ p: { xs: 3, md: 4 } }}>
+                <Chip label={ar ? 'معاينة مجانية' : 'Free Preview'} size="small" icon={<PlayCircleOutlineRounded fontSize="small" />} sx={{ mb: 2.5, background: alpha(palette.success, 0.15), color: palette.success, fontWeight: 900, border: `1px solid ${alpha(palette.success, 0.3)}`, px: 1 }} />
+                <Typography variant="h4" sx={{ fontWeight: 900, mb: 1.5, color: '#fff', letterSpacing: '-0.5px' }}>{activeLesson?.title || "..."}</Typography>
+                <Typography sx={{ color: palette.textSec, lineHeight: 1.8, fontSize: '1.05rem' }}>{activeLesson?.description || (ar ? "استمتع بمشاهدة هذا الدرس المجاني من الكورس." : "Enjoy watching this free preview lesson from the course.")}</Typography>
+              </Box>
+            </Card>
+          </Grid>
+
+          {/* ================= COURSE CONTENT (PLAYLIST) ================= */}
+          <Grid item xs={12} lg={4} component={motion.div} variants={itemVariants}>
+            <Card sx={{ background: `linear-gradient(180deg, rgba(8, 69, 112, 0.3) 0%, rgba(10, 10, 15, 0.9) 100%)`, backdropFilter: 'blur(15px)', border: `1px solid ${alpha(palette.border, 0.3)}`, borderRadius: 6, height: { xs: 'auto', lg: '85vh' }, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: `0 20px 40px rgba(0,0,0,0.5)` }}>
+              
+              <Box sx={{ p: 3.5, borderBottom: `1px solid ${alpha(palette.border, 0.2)}`, background: 'rgba(255,255,255,0.02)' }}>
+                <Typography sx={{ fontWeight: 900, fontSize: '1.3rem', color: '#fff', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <MenuBookRounded sx={{ color: palette.primary }} /> {ar ? 'محتوى الكورس' : 'Course Content'}
+                </Typography>
+              </Box>
+
+              <Box sx={{ flexGrow: 1, overflowY: 'auto', '&::-webkit-scrollbar': { width: '8px' }, '&::-webkit-scrollbar-track': { background: 'transparent' }, '&::-webkit-scrollbar-thumb': { background: alpha(palette.primary, 0.3), borderRadius: '10px' }, '&::-webkit-scrollbar-thumb:hover': { background: palette.primary } }}>
+                {sections.map((section: any, sIndex: number) => (
+                  <Box key={section.id}>
+                    <Box sx={{ px: 3, py: 2.5, background: 'rgba(0,0,0,0.4)', borderBottom: `1px solid rgba(255,255,255,0.02)` }}>
+                      <Typography sx={{ fontWeight: 900, color: palette.textMain, fontSize: '1rem' }}>{sIndex + 1}. {section.title}</Typography>
+                    </Box>
+
+                    <List disablePadding>
+                      {section.lessons.map((lesson: any, lIndex: number) => {
+                        const isSelected = activeLesson?.id === lesson.id;
+                        const isFree = lesson.isFreePreview;
+
+                        return (
+                          <ListItemButton
+                            key={lesson.id} 
+                            onClick={() => isFree ? selectLesson(lesson) : toast.error(ar ? 'الدرس ده للمشتركين بس، اشتري الكورس لفتحه 🔒' : 'This lesson is locked. Purchase the course to unlock! 🔒')} 
+                            selected={isSelected}
+                            sx={{
+                              py: 2.5, px: 3, borderBottom: '1px solid rgba(255,255,255,0.02)', transition: 'all 0.3s ease',
+                              opacity: isFree ? 1 : 0.45, 
+                              cursor: isFree ? 'pointer' : 'not-allowed',
+                              '&.Mui-selected': { background: `linear-gradient(90deg, ${alpha(palette.primary, 0.15)} 0%, transparent 100%)`, borderLeft: `4px solid ${palette.primary}` },
+                              '&:hover': { background: isFree ? 'rgba(48,192,242,0.05)' : 'transparent', pl: isFree ? 4 : 3 } // Animation on hover
+                            }}
+                          >
+                            <Box sx={{ mr: 2.5, display: 'flex', alignItems: 'center' }}>
+                              {isFree ? (
+                                <PlayCircleOutlineRounded sx={{ color: isSelected ? palette.primary : palette.textSec, fontSize: 28 }} />
+                              ) : (
+                                <LockRounded sx={{ color: palette.locked, fontSize: 24 }} />
+                              )}
+                            </Box>
+
+                            <ListItemText
+                              primary={`${lIndex + 1}. ${lesson.title}`}
+                              primaryTypographyProps={{ fontSize: '1rem', fontWeight: isSelected ? 900 : 700, color: isSelected ? '#fff' : palette.textSec, sx: { transition: 'color 0.3s' } }}
+                            />
+                            
+                            {isSelected && (
+                              <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}>
+                                <Typography component={motion.p} animate={{ opacity: [1, 0.5, 1] }} transition={{ repeat: Infinity, duration: 1.5 }} sx={{ fontSize: '0.8rem', color: palette.primary, fontWeight: 900, ml: 2 }}>
+                                  {ar ? 'شغال الآن' : 'Playing'}
+                                </Typography>
+                              </motion.div>
+                            )}
+                          </ListItemButton>
+                        );
+                      })}
+                    </List>
+                  </Box>
+                ))}
+              </Box>
+            </Card>
+          </Grid>
+        </Grid>
+      </Container>
+    </Box>
+  );
+}

@@ -1,0 +1,635 @@
+'use client';
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import {
+  Box, Container, Card, Typography, Button, Tabs, Tab,
+  Table, TableBody, TableCell, TableHead, TableRow, Chip,
+  IconButton, CircularProgress, Dialog, DialogTitle, DialogContent,
+  DialogActions, FormControl, InputLabel, Select, MenuItem, Switch, 
+  FormControlLabel, TableContainer, TextField, Tooltip
+} from '@mui/material';
+import { Edit, Delete, Add, Refresh, FactCheck, Security } from '@mui/icons-material';
+import Navbar from '@/components/layout/Navbar';
+import { adminApi, coursesApi } from '@/lib/api';
+import { useAuthStore } from '@/store/auth.store';
+import toast from 'react-hot-toast';
+import dayjs from 'dayjs';
+
+// ================= THEME PALETTE =================
+const palette = {
+  bg: '#0a0a0f',
+  cardBg: '#084570',
+  border: '#259acb',
+  primary: '#30c0f2',
+  primaryHover: '#83d9f7',
+  textMain: '#a8eff9',
+  textSec: '#a0ddf1',
+  danger: '#e62f76',
+  success: '#22c55e',
+  warning: '#f59e0b',
+  locked: '#52525b'
+};
+
+export default function AdminPage() {
+  const { locale } = useParams() as { locale: string };
+  const router = useRouter();
+  const { isAuthenticated, user } = useAuthStore();
+  const ar = locale === 'ar';
+
+  const [isMounted, setIsMounted] = useState(false);
+  const [tab, setTab] = useState(0);
+  const [users, setUsers] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [withdrawals, setWithdrawals] = useState<any[]>([]); // 🔴 حالة السحوبات
+  const [loading, setLoading] = useState(true);
+
+  // ---------- User Edit State ----------
+  const [editUserOpen, setEditUserOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [editRole, setEditRole] = useState('USER');
+  const [editIsActive, setEditIsActive] = useState(true);
+  const [savingUser, setSavingUser] = useState(false);
+
+  // ---------- Course State ----------
+  const [courseDialogOpen, setCourseDialogOpen] = useState(false);
+  const [deleteCourseDialogOpen, setDeleteCourseDialogOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<any>(null);
+  const [savingCourse, setSavingCourse] = useState(false);
+  
+  const [courseForm, setCourseForm] = useState({
+    title: '',
+    description: '',
+    shortDescription: '',
+    packageType: 'BASIC',
+    originalPrice: '',
+    thumbnailUrl: ''
+  });
+
+  // ---------- Withdrawal Review State 🔴 ----------
+  const [reviewWithdrawalOpen, setReviewWithdrawalOpen] = useState(false);
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState<any>(null);
+  const [withdrawalStatus, setWithdrawalStatus] = useState('PROCESSING');
+  const [adminNote, setAdminNote] = useState('');
+  const [savingWithdrawal, setSavingWithdrawal] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    if (!isAuthenticated) { router.push(`/${locale}/login`); return; }
+    if (user?.role !== 'ADMIN' && user?.role !== 'MANAGER') {
+      router.push(`/${locale}/dashboard`);
+      return;
+    }
+    fetchAll();
+  }, [isMounted, isAuthenticated, user, locale, router]);
+
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const [usersRes, coursesRes] = await Promise.all([
+        adminApi.users(),
+        // جلب الكورسات فقط لو كان أدمن، المانجر لا يراها هنا
+        user?.role === 'ADMIN' ? adminApi.allCourses().catch(() => ({ data: { data: { courses: [] } } })) : Promise.resolve({ data: { data: { courses: [] } } }),
+      ]);
+
+      setUsers(usersRes?.data?.data?.users || usersRes?.data?.users || []);
+      setCourses(coursesRes?.data?.data?.courses || coursesRes?.data?.courses || []);
+
+      // جلب المعاملات (للأدمن فقط)
+      if (user?.role === 'ADMIN') {
+        try {
+          const txRes = await adminApi.transactions();
+          const d = txRes.data.data;
+          setTransactions(Array.isArray(d) ? d : d.purchases || d.transactions || []);
+        } catch (err) {}
+
+        // 🔴 جلب طلبات السحب
+        try {
+          const wRes = await (adminApi as any).getWithdrawals();
+          setWithdrawals(wRes.data?.data || wRes.data || []);
+        } catch (err) {}
+      }
+
+    } catch (err) {
+      toast.error(ar ? 'خطأ في تحميل البيانات' : 'Error loading data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ============================== HANDLERS ==============================
+
+  // --- User Handlers ---
+  const handleOpenEditUser = (u: any) => {
+    // 🔴 حماية: المانجر ميقدرش يفتح تعديل الأدمن
+    if (user?.role === 'MANAGER' && u.role === 'ADMIN') {
+      toast.error(ar ? 'غير مسموح لك بتعديل بيانات المسؤول (Admin)' : 'Not allowed to edit Admin data');
+      return;
+    }
+    setSelectedUser(u);
+    setEditRole(u.role || 'USER');
+    setEditIsActive(u.isActive !== false); 
+    setEditUserOpen(true);
+  };
+
+  const handleSaveUser = async () => {
+    if (!selectedUser) return;
+    setSavingUser(true);
+    try {
+      const promises = [];
+      if (selectedUser.role !== editRole) promises.push(adminApi.updateUserRole(selectedUser.id, editRole));
+      if (selectedUser.isActive !== editIsActive) promises.push(adminApi.updateUserStatus(selectedUser.id, editIsActive));
+
+      if (promises.length > 0) {
+        await Promise.all(promises);
+        toast.success(ar ? 'تم التحديث بنجاح' : 'Updated successfully');
+        fetchAll(); 
+      }
+      setEditUserOpen(false);
+    } catch (err: any) {
+      toast.error(ar ? 'خطأ أثناء التحديث' : 'Update error');
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  // --- Course Handlers ---
+  const handleOpenAddCourse = () => {
+    setSelectedCourse(null);
+    setCourseForm({ title: '', description: '', shortDescription: '', packageType: 'BASIC', originalPrice: '', thumbnailUrl: '' });
+    setCourseDialogOpen(true);
+  };
+
+  const handleOpenEditCourse = async (c: any) => {
+    setSelectedCourse(c);
+    setCourseForm({
+      title: c.title || '', description: c.description || '', shortDescription: c.shortDescription || '',
+      packageType: c.packageType || 'BASIC', originalPrice: c.originalPrice || '', thumbnailUrl: c.thumbnailUrl || ''
+    });
+    setCourseDialogOpen(true);
+
+    if (c.slug) {
+      try {
+        const res = await coursesApi.getBySlug(c.slug);
+        const fullCourse = res.data?.data || res.data;
+        if (fullCourse) {
+          setCourseForm(prev => ({
+            ...prev, description: fullCourse.description || prev.description, shortDescription: fullCourse.shortDescription || prev.shortDescription, thumbnailUrl: fullCourse.thumbnailUrl || prev.thumbnailUrl
+          }));
+        }
+      } catch (err) {}
+    }
+  };
+
+  const handleSaveCourse = async () => {
+    if (!courseForm.title || !courseForm.description) {
+      toast.error(ar ? 'يرجى إدخال عنوان ووصف الكورس' : 'Title and description are required');
+      return;
+    }
+    setSavingCourse(true);
+    try {
+      const payload: any = {
+        title: courseForm.title, description: courseForm.description,
+        shortDescription: courseForm.shortDescription || courseForm.description.substring(0, 80),
+        packageType: courseForm.packageType, originalPrice: parseFloat(courseForm.originalPrice) || 0,
+      };
+      if (courseForm.thumbnailUrl) payload.thumbnailUrl = courseForm.thumbnailUrl;
+
+      if (selectedCourse) {
+        await adminApi.updateCourse(selectedCourse.id, payload);
+        toast.success(ar ? 'تم تعديل الكورس بنجاح' : 'Course updated');
+      } else {
+        await adminApi.createCourse(payload);
+        toast.success(ar ? 'تم إضافة الكورس بنجاح' : 'Course created');
+      }
+      setCourseDialogOpen(false);
+      fetchAll();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || (ar ? 'حدث خطأ في الخادم' : 'Server error'));
+    } finally {
+      setSavingCourse(false);
+    }
+  };
+
+  const handleDeleteClick = (c: any) => { setSelectedCourse(c); setDeleteCourseDialogOpen(true); };
+  const handleConfirmDeleteCourse = async () => {
+    if (!selectedCourse) return;
+    setSavingCourse(true);
+    try {
+      await adminApi.deleteCourse(selectedCourse.id);
+      toast.success(ar ? 'تم حذف الكورس' : 'Course deleted');
+      setDeleteCourseDialogOpen(false);
+      fetchAll();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || (ar ? 'فشل الحذف' : 'Failed to delete'));
+    } finally { setSavingCourse(false); }
+  };
+
+  const publishCourse = async (id: string) => {
+    try {
+      await adminApi.updateCourse(id, { status: 'PUBLISHED' });
+      toast.success(ar ? "تم نشر الكورس بنجاح ✓" : "Course Published ✓");
+      fetchAll();
+    } catch { toast.error(ar ? "فشل النشر" : "Publish failed"); }
+  };
+
+  // --- Withdrawal Handlers 🔴 ---
+  const handleOpenReviewWithdrawal = (w: any) => {
+    setSelectedWithdrawal(w);
+    setWithdrawalStatus(w.status === 'PENDING' ? 'PROCESSING' : w.status);
+    setAdminNote(w.adminNote || '');
+    setReviewWithdrawalOpen(true);
+  };
+
+  const handleProcessWithdrawal = async () => {
+    if (!selectedWithdrawal) return;
+    setSavingWithdrawal(true);
+    try {
+      await (adminApi as any).processWithdrawal(selectedWithdrawal.id, {
+        status: withdrawalStatus,
+        adminNote: adminNote
+      });
+      toast.success(ar ? 'تم تحديث حالة الطلب' : 'Withdrawal status updated');
+      setReviewWithdrawalOpen(false);
+      fetchAll(); // تحديث الجدول
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || (ar ? 'حدث خطأ' : 'Error updating'));
+    } finally {
+      setSavingWithdrawal(false);
+    }
+  };
+
+  // ============================== RENDER ==============================
+
+  if (!isMounted) return <Box sx={{ minHeight: '100vh', background: palette.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CircularProgress sx={{ color: palette.primary }} /></Box>;
+
+  return (
+    <Box sx={{ minHeight: '100vh', background: palette.bg, pb: 10 }}>
+      <Navbar />
+      <Container maxWidth="lg" sx={{ py: { xs: 3, md: 5 } }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 4 }}>
+          <Typography variant="h4" sx={{ fontWeight: 800, color: palette.textMain, fontSize: { xs: '1.5rem', md: '2.125rem' } }}>
+            {ar ? '⚙️ لوحة التحكم والإدارة' : '⚙️ Admin Dashboard'}
+          </Typography>
+        </Box>
+
+        <Tabs 
+          value={tab} 
+          onChange={(_, v) => setTab(v)} 
+          variant="scrollable" 
+          scrollButtons="auto" 
+          sx={{ 
+            mb: 3, borderBottom: 1, borderColor: palette.border,
+            '& .MuiTab-root': { color: palette.textSec, fontWeight: 'bold' },
+            '& .Mui-selected': { color: `${palette.primary} !important` },
+            '& .MuiTabs-indicator': { backgroundColor: palette.primary }
+          }}
+        >
+          <Tab label={ar ? 'المستخدمون' : 'Users'} />
+          {/* 🔴 إخفاء التابات الباقية لو كان مانجر */}
+          {user?.role === 'ADMIN' && <Tab label={ar ? 'الكورسات' : 'Courses'} />}
+          {user?.role === 'ADMIN' && <Tab label={ar ? 'المعاملات المالية' : 'Transactions'} />}
+          {user?.role === 'ADMIN' && <Tab label={ar ? 'طلبات السحب' : 'Withdrawals'} />}
+        </Tabs>
+
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}><CircularProgress sx={{ color: palette.primary }} /></Box>
+        ) : (
+          <>
+            {/* 1. USERS TAB */}
+            {tab === 0 && (
+              <Card sx={{ p: { xs: 1, sm: 2 }, background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+                <TableContainer>
+                  <Table sx={{ minWidth: 600 }}>
+                    <TableHead>
+                      <TableRow sx={{ '& th': { color: palette.textMain, borderBottom: `1px solid ${palette.border}`, fontWeight: 'bold' } }}>
+                        <TableCell>{ar ? 'المستخدم' : 'User'}</TableCell>
+                        <TableCell>{ar ? 'البريد الإلكتروني' : 'Email'}</TableCell>
+                        <TableCell>{ar ? 'الرتبة' : 'Role'}</TableCell>
+                        <TableCell>{ar ? 'الحالة' : 'Status'}</TableCell>
+                        <TableCell>{ar ? 'تاريخ الانضمام' : 'Joined'}</TableCell>
+                        <TableCell align="center">{ar ? 'إجراءات' : 'Actions'}</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {users.map((u: any) => (
+                        <TableRow key={u.id} sx={{ '& td': { borderBottom: '1px solid rgba(37, 154, 203, 0.2)' }, '&:hover': { background: 'rgba(255,255,255,0.03)' } }}>
+                          <TableCell sx={{ color: '#fff' }}>{u.firstName} {u.lastName}</TableCell>
+                          <TableCell sx={{ color: palette.textSec }}>{u.email}</TableCell>
+                          <TableCell>
+                            <Chip label={u.role} size="small" sx={{ background: u.role === 'ADMIN' ? 'rgba(239,68,68,0.2)' : 'rgba(48,192,242,0.2)', color: u.role === 'ADMIN' ? palette.danger : palette.primary, fontWeight: 'bold' }} />
+                          </TableCell>
+                          <TableCell>
+                             <Chip label={u.isActive === false ? (ar ? 'موقوف' : 'Suspended') : (ar ? 'نشط' : 'Active')} size="small" sx={{ background: u.isActive === false ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)', color: u.isActive === false ? palette.danger : palette.success, fontWeight: 'bold' }} />
+                          </TableCell>
+                          <TableCell sx={{ color: palette.textSec }}>{dayjs(u.createdAt).format('DD/MM/YYYY')}</TableCell>
+                          <TableCell align="center">
+                            {/* 🔴 المانجر ميقدرش يضغط "تعديل" لليوزر اللي رتبته ADMIN */}
+                            {!(user?.role === 'MANAGER' && u.role === 'ADMIN') ? (
+                              <IconButton onClick={() => handleOpenEditUser(u)} sx={{ color: palette.primary, '&:hover': { background: 'rgba(48,192,242,0.1)' } }}>
+                                <Edit />
+                              </IconButton>
+                            ) : (
+                               <Tooltip title={ar ? "إدارة عليا (محمي)" : "Super Admin (Protected)"}>
+                                  <Security sx={{ color: palette.locked, opacity: 0.5 }} />
+                               </Tooltip>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {users.length === 0 && <TableRow><TableCell colSpan={6} align="center" sx={{ py: 3, color: palette.textSec }}>{ar ? 'لا يوجد مستخدمين' : 'No users'}</TableCell></TableRow>}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Card>
+            )}
+
+            {/* 2. COURSES TAB (Only Admin) */}
+            {user?.role === 'ADMIN' && tab === 1 && (
+              <Box>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mb: 2 }}>
+                  <Button variant="outlined" onClick={() => router.push(`/${locale}/admin/courses`)} 
+                    sx={{ borderColor: palette.primary, color: palette.primary, fontWeight: 'bold', '&:hover': { borderColor: palette.primaryHover, background: 'rgba(48,192,242,0.1)' } }}>
+                    {ar ? 'إدارة محتوى الكورسات' : 'Manage Courses Content'}
+                  </Button>
+                  <Button variant="contained" startIcon={<Add />} onClick={handleOpenAddCourse} sx={{ background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, color: '#000', fontWeight: 'bold' }}>
+                    {ar ? 'إضافة كورس' : 'Add Course'}
+                  </Button>
+                </Box>
+                <Card sx={{ p: { xs: 1, sm: 2 }, background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+                  <TableContainer>
+                    <Table sx={{ minWidth: 600 }}>
+                      <TableHead>
+                        <TableRow sx={{ '& th': { color: palette.textMain, borderBottom: `1px solid ${palette.border}`, fontWeight: 'bold' } }}>
+                          <TableCell>{ar ? 'الكورس' : 'Course'}</TableCell>
+                          <TableCell>{ar ? 'الباقة' : 'Package'}</TableCell>
+                          <TableCell>{ar ? 'السعر' : 'Price'}</TableCell>
+                          <TableCell>{ar ? 'الحالة' : 'Status'}</TableCell>
+                          <TableCell align="center">{ar ? 'إجراءات' : 'Actions'}</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {courses.map((c: any) => (
+                          <TableRow key={c.id} sx={{ '& td': { borderBottom: '1px solid rgba(37, 154, 203, 0.2)' }, '&:hover': { background: 'rgba(255,255,255,0.03)' } }}>
+                            <TableCell sx={{ color: '#fff', fontWeight: 600 }}>{c.title}</TableCell>
+                            <TableCell sx={{ color: palette.textSec }}>{c.packageType}</TableCell>
+                            <TableCell sx={{ color: palette.success, fontWeight: 'bold' }}>${c.originalPrice || 0}</TableCell>
+                            <TableCell>
+                              <Chip label={c.status} size="small" sx={{ 
+                                background: c.status === "PUBLISHED" ? 'rgba(34,197,94,0.2)' : c.status === "DRAFT" ? 'rgba(161,161,170,0.2)' : c.status === "HIDDEN" ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)', 
+                                color: c.status === "PUBLISHED" ? palette.success : c.status === "DRAFT" ? '#a1a1aa' : c.status === "HIDDEN" ? palette.danger : palette.warning, fontWeight: 'bold'
+                              }} />
+                            </TableCell>
+                            <TableCell align="center">
+                              {c.status === "DRAFT" && (
+                                <Button size="small" variant="outlined" onClick={() => publishCourse(c.id)} sx={{ borderColor: palette.success, color: palette.success, mr: 1 }}>
+                                  {ar ? 'نشر' : 'Publish'}
+                                </Button>
+                              )}
+                              <IconButton onClick={() => handleOpenEditCourse(c)} sx={{ color: palette.primary, '&:hover': { background: 'rgba(48,192,242,0.1)' } }}><Edit /></IconButton>
+                              <IconButton onClick={() => handleDeleteClick(c)} sx={{ color: palette.danger, '&:hover': { background: 'rgba(230,47,118,0.1)' } }}><Delete /></IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {courses.length === 0 && <TableRow><TableCell colSpan={5} align="center" sx={{ py: 3, color: palette.textSec }}>{ar ? 'لا توجد كورسات' : 'No courses'}</TableCell></TableRow>}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Card>
+              </Box>
+            )}
+
+            {/* 3. TRANSACTIONS TAB (Only Admin) */}
+            {user?.role === 'ADMIN' && tab === 2 && (
+              <Card sx={{ p: { xs: 1, sm: 2 }, background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+                <TableContainer>
+                  <Table sx={{ minWidth: 600 }}>
+                    <TableHead>
+                      <TableRow sx={{ '& th': { color: palette.textMain, borderBottom: `1px solid ${palette.border}`, fontWeight: 'bold' } }}>
+                        <TableCell>{ar ? 'المستخدم' : 'User'}</TableCell>
+                        <TableCell>{ar ? 'الكورس' : 'Course'}</TableCell>
+                        <TableCell>{ar ? 'المبلغ' : 'Amount'}</TableCell>
+                        <TableCell>{ar ? 'التاريخ' : 'Date'}</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {transactions.map((tx: any) => (
+                        <TableRow key={tx.id} sx={{ '& td': { borderBottom: '1px solid rgba(37, 154, 203, 0.2)' }, '&:hover': { background: 'rgba(255,255,255,0.03)' } }}>
+                          <TableCell sx={{ color: '#fff' }}>{tx.user?.firstName} {tx.user?.lastName}</TableCell>
+                          <TableCell sx={{ color: palette.textSec }}>{tx.course?.title}</TableCell>
+                          <TableCell sx={{ color: palette.success, fontWeight: 'bold' }}>${tx.amountPaid}</TableCell>
+                          <TableCell sx={{ color: palette.textSec }}>{dayjs(tx.createdAt).format('DD/MM/YYYY')}</TableCell>
+                        </TableRow>
+                      ))}
+                      {transactions.length === 0 && <TableRow><TableCell colSpan={4} align="center" sx={{ py: 3, color: palette.textSec }}>{ar ? 'لا توجد معاملات' : 'No transactions'}</TableCell></TableRow>}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Card>
+            )}
+
+            {/* 4. WITHDRAWALS TAB 🔴 (Only Admin) */}
+            {user?.role === 'ADMIN' && tab === 3 && (
+              <Card sx={{ p: { xs: 1, sm: 2 }, background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+                <TableContainer>
+                  <Table sx={{ minWidth: 800 }}>
+                    <TableHead>
+                      <TableRow sx={{ '& th': { color: palette.textMain, borderBottom: `1px solid ${palette.border}`, fontWeight: 'bold' } }}>
+                        <TableCell>{ar ? 'المسوق (User)' : 'Affiliate'}</TableCell>
+                        <TableCell>{ar ? 'المبلغ' : 'Amount'}</TableCell>
+                        <TableCell>{ar ? 'وسيلة الدفع' : 'Method'}</TableCell>
+                        <TableCell>{ar ? 'تفاصيل الحساب' : 'Account Details'}</TableCell>
+                        <TableCell>{ar ? 'الحالة' : 'Status'}</TableCell>
+                        <TableCell>{ar ? 'التاريخ' : 'Date'}</TableCell>
+                        <TableCell align="center">{ar ? 'مراجعة' : 'Review'}</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {withdrawals.map((w: any) => (
+                        <TableRow key={w.id} sx={{ '& td': { borderBottom: '1px solid rgba(37, 154, 203, 0.2)' }, '&:hover': { background: 'rgba(255,255,255,0.03)' } }}>
+                          <TableCell sx={{ color: '#fff' }}>
+                            {w.user?.firstName} {w.user?.lastName} <br/>
+                            <span style={{ fontSize: '0.8rem', color: palette.textSec }}>{w.user?.email}</span>
+                          </TableCell>
+                          <TableCell sx={{ color: palette.primary, fontWeight: 'bold', fontSize: '1.1rem' }}>${w.amount}</TableCell>
+                          <TableCell sx={{ color: palette.textSec, textTransform: 'capitalize' }}>{w.method.replace('_', ' ')}</TableCell>
+                          <TableCell sx={{ color: palette.textSec, fontFamily: 'monospace' }}>{w.accountDetails}</TableCell>
+                          <TableCell>
+                             <Chip 
+                               label={w.status} 
+                               size="small" 
+                               sx={{ 
+                                 background: w.status === 'COMPLETED' ? 'rgba(34,197,94,0.2)' : w.status === 'REJECTED' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)', 
+                                 color: w.status === 'COMPLETED' ? palette.success : w.status === 'REJECTED' ? palette.danger : palette.warning, 
+                                 fontWeight: 'bold' 
+                               }} 
+                             />
+                          </TableCell>
+                          <TableCell sx={{ color: palette.textSec }}>{dayjs(w.createdAt).format('DD/MM/YYYY')}</TableCell>
+                          <TableCell align="center">
+                            <Tooltip title={ar ? "مراجعة واتخاذ قرار" : "Review & Decide"}>
+                              <IconButton onClick={() => handleOpenReviewWithdrawal(w)} sx={{ color: palette.primary, '&:hover': { background: 'rgba(48,192,242,0.1)' } }}>
+                                <FactCheck />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {withdrawals.length === 0 && <TableRow><TableCell colSpan={7} align="center" sx={{ py: 3, color: palette.textSec }}>{ar ? 'لا توجد طلبات سحب' : 'No withdrawal requests'}</TableCell></TableRow>}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Card>
+            )}
+          </>
+        )}
+      </Container>
+
+      {/* ============================== DIALOGS ============================== */}
+
+      {/* Edit User Dialog */}
+      <Dialog open={editUserOpen} onClose={() => setEditUserOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3, minWidth: { xs: '90%', sm: 400 } } }}>
+        <DialogTitle sx={{ fontWeight: 700, color: palette.textMain, borderBottom: `1px solid rgba(37,154,203,0.3)` }}>{ar ? 'تعديل المستخدم' : 'Edit User'}</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
+          <Typography sx={{ color: palette.textSec, mb: 1 }}>{selectedUser?.firstName} {selectedUser?.lastName} <br/><span style={{fontSize:'0.85rem'}}>{selectedUser?.email}</span></Typography>
+          <FormControl fullWidth sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border }, '&:hover fieldset': { borderColor: palette.primaryHover } } }}>
+            <InputLabel id="role-select-label" sx={{ color: palette.textSec }}>{ar ? 'الرتبة' : 'Role'}</InputLabel>
+            <Select labelId="role-select-label" value={editRole} label={ar ? 'الرتبة' : 'Role'} onChange={(e) => setEditRole(e.target.value)} sx={{ color: '#fff' }}>
+              <MenuItem value="USER">{ar ? 'مستخدم عادي' : 'USER'}</MenuItem>
+              <MenuItem value="INSPECTOR">{ar ? 'محاضر (Inspector)' : 'INSPECTOR'}</MenuItem>
+              
+              {/* 🔴 إخفاء رتب الإدارة عن المانجر */}
+              {user?.role === 'ADMIN' && <MenuItem value="MANAGER">{ar ? 'مدير (Manager)' : 'MANAGER'}</MenuItem>}
+              {user?.role === 'ADMIN' && <MenuItem value="ADMIN">{ar ? 'مسؤول (Admin)' : 'ADMIN'}</MenuItem>}
+            </Select>
+          </FormControl>
+          <FormControlLabel control={<Switch checked={editIsActive} onChange={(e) => setEditIsActive(e.target.checked)} color={editIsActive ? "success" : "error"} />}
+            label={<Typography sx={{ color: editIsActive ? palette.success : palette.danger, fontWeight: 'bold' }}>{editIsActive ? (ar ? 'الحساب نشط' : 'Active Account') : (ar ? 'الحساب موقوف' : 'Suspended Account')}</Typography>}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5, borderTop: `1px solid rgba(37,154,203,0.3)` }}>
+          <Button onClick={() => setEditUserOpen(false)} sx={{ color: palette.textSec }}>{ar ? 'إلغاء' : 'Cancel'}</Button>
+          <Button onClick={handleSaveUser} variant="contained" disabled={savingUser} sx={{ bgcolor: palette.primary, color: '#000', fontWeight: 'bold', '&:hover': {bgcolor: palette.primaryHover} }}>
+            {savingUser ? <CircularProgress size={20} sx={{color: '#000'}}/> : (ar ? 'حفظ' : 'Save')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add/Edit Course Dialog */}
+      <Dialog open={courseDialogOpen} onClose={() => setCourseDialogOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3, minWidth: { xs: '90%', sm: 400 } } }}>
+        <DialogTitle sx={{ fontWeight: 700, color: palette.textMain, borderBottom: `1px solid rgba(37,154,203,0.3)` }}>{selectedCourse ? (ar ? 'تعديل الكورس' : 'Edit Course') : (ar ? 'إضافة كورس جديد' : 'Add New Course')}</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+          <TextField label={ar ? 'عنوان الكورس' : 'Course Title'} value={courseForm.title} onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border }, '&:hover fieldset': { borderColor: palette.primaryHover } } }} />
+          <TextField label={ar ? 'وصف قصير (اختياري)' : 'Short Description'} value={courseForm.shortDescription} onChange={(e) => setCourseForm({ ...courseForm, shortDescription: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}/>
+          <TextField label={ar ? 'الوصف الشامل' : 'Full Description'} value={courseForm.description} onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })} fullWidth multiline rows={3} InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}/>
+          <TextField label={ar ? 'السعر ($)' : 'Price ($)'} type="number" value={courseForm.originalPrice} onChange={(e) => setCourseForm({ ...courseForm, originalPrice: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}/>
+          <FormControl fullWidth sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}>
+            <InputLabel sx={{ color: palette.textSec }}>{ar ? 'نوع الباقة' : 'Package Type'}</InputLabel>
+            <Select value={courseForm.packageType} label={ar ? 'نوع الباقة' : 'Package Type'} onChange={(e) => setCourseForm({ ...courseForm, packageType: e.target.value })} sx={{ color: '#fff' }}>
+              <MenuItem value="BASIC">Basic</MenuItem>
+              <MenuItem value="STANDARD">Standard</MenuItem>
+              <MenuItem value="PREMIUM">Premium</MenuItem>
+              <MenuItem value="ENTERPRISE">Enterprise</MenuItem>
+            </Select>
+          </FormControl>
+          <TextField 
+            label={ar ? 'رابط غلاف الدورة (Thumbnail URL)' : 'Thumbnail URL'} 
+            value={courseForm.thumbnailUrl} 
+            onChange={(e) => setCourseForm({ ...courseForm, thumbnailUrl: e.target.value })} 
+            fullWidth 
+            InputProps={{ sx: { color: '#fff' } }} 
+            InputLabelProps={{ sx: { color: palette.textSec } }} 
+            sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5, borderTop: `1px solid rgba(37,154,203,0.3)` }}>
+          <Button onClick={() => setCourseDialogOpen(false)} sx={{ color: palette.textSec }}>{ar ? 'إلغاء' : 'Cancel'}</Button>
+          <Button onClick={handleSaveCourse} variant="contained" disabled={savingCourse} sx={{ bgcolor: palette.primary, color: '#000', fontWeight: 'bold', '&:hover': {bgcolor: palette.primaryHover} }}>
+            {savingCourse ? <CircularProgress size={20} sx={{color: '#000'}}/> : (ar ? 'حفظ الكورس' : 'Save Course')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Course Dialog */}
+      <Dialog open={deleteCourseDialogOpen} onClose={() => setDeleteCourseDialogOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `1px solid ${palette.danger}`, borderRadius: 3, minWidth: { xs: '90%', sm: 350 } } }}>
+        <DialogTitle sx={{ fontWeight: 700, color: palette.danger }}>{ar ? 'تأكيد الحذف' : 'Confirm Delete'}</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: '#fff' }}>{ar ? 'هل أنت متأكد من حذف هذا الكورس بشكل نهائي؟' : 'Are you sure you want to delete this course?'}</Typography>
+          <Typography sx={{ color: palette.textSec, mt: 1, fontWeight: 'bold' }}>{selectedCourse?.title}</Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5 }}>
+          <Button onClick={() => setDeleteCourseDialogOpen(false)} sx={{ color: palette.textSec }}>{ar ? 'تراجع' : 'Cancel'}</Button>
+          <Button onClick={handleConfirmDeleteCourse} variant="contained" disabled={savingCourse} sx={{ background: palette.danger, '&:hover': { background: '#be123c' }, fontWeight: 'bold' }}>
+            {savingCourse ? <CircularProgress size={20} sx={{color: '#fff'}}/> : (ar ? 'نعم، احذف' : 'Yes, Delete')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Review Withdrawal Dialog */}
+      <Dialog open={reviewWithdrawalOpen} onClose={() => setReviewWithdrawalOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3, minWidth: { xs: '90%', sm: 450 } } }}>
+        <DialogTitle sx={{ fontWeight: 800, color: palette.textMain, borderBottom: `1px solid rgba(37,154,203,0.3)`, pb: 2 }}>
+          {ar ? 'مراجعة طلب السحب' : 'Review Withdrawal'}
+        </DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 3 }}>
+          
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 2, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 2, border: `1px dashed ${palette.primary}` }}>
+             <Box>
+                <Typography sx={{ color: palette.textSec, fontSize: '0.85rem' }}>{ar ? 'المسوق:' : 'Affiliate:'}</Typography>
+                <Typography sx={{ color: '#fff', fontWeight: 'bold' }}>{selectedWithdrawal?.user?.firstName} {selectedWithdrawal?.user?.lastName}</Typography>
+             </Box>
+             <Box sx={{ textAlign: 'right' }}>
+                <Typography sx={{ color: palette.textSec, fontSize: '0.85rem' }}>{ar ? 'المبلغ المطلوب:' : 'Requested Amount:'}</Typography>
+                <Typography sx={{ color: palette.primary, fontWeight: 900, fontSize: '1.2rem' }}>${selectedWithdrawal?.amount}</Typography>
+             </Box>
+          </Box>
+
+          <FormControl fullWidth sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border }, '&:hover fieldset': { borderColor: palette.primaryHover } } }}>
+            <InputLabel sx={{ color: palette.textSec }}>{ar ? 'قرار الإدارة (الحالة)' : 'Decision (Status)'}</InputLabel>
+            <Select 
+               value={withdrawalStatus} 
+               label={ar ? 'قرار الإدارة (الحالة)' : 'Decision (Status)'} 
+               onChange={(e) => setWithdrawalStatus(e.target.value)} 
+               sx={{ color: '#fff' }}
+            >
+              <MenuItem value="PROCESSING">{ar ? 'قيد المراجعة / تعليق' : 'Processing / Hold'}</MenuItem>
+              <MenuItem value="COMPLETED" sx={{ color: palette.success, fontWeight: 'bold' }}>{ar ? 'موافقة (مكتمل)' : 'Approve (Completed)'}</MenuItem>
+              <MenuItem value="REJECTED" sx={{ color: palette.danger, fontWeight: 'bold' }}>{ar ? 'رفض الطلب' : 'Reject'}</MenuItem>
+            </Select>
+          </FormControl>
+
+          <TextField 
+            label={ar ? 'ملاحظة الإدارة (ستظهر للمسوق)' : 'Admin Note (Visible to affiliate)'} 
+            value={adminNote} 
+            onChange={(e) => setAdminNote(e.target.value)} 
+            fullWidth multiline rows={3} 
+            placeholder={ar ? 'مثال: تم تحويل المبلغ بنجاح، أو تم الرفض بسبب خطأ في الرقم' : 'e.g. Transferred successfully, or rejected due to wrong number'}
+            InputProps={{ sx: { color: '#fff' } }} 
+            InputLabelProps={{ sx: { color: palette.textSec } }} 
+            sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border }, '&:hover fieldset': { borderColor: palette.primaryHover } } }}
+          />
+
+        </DialogContent>
+        <DialogActions sx={{ p: 3, borderTop: `1px solid rgba(37,154,203,0.3)` }}>
+          <Button onClick={() => setReviewWithdrawalOpen(false)} sx={{ color: palette.textSec, fontWeight: 'bold' }}>{ar ? 'إلغاء' : 'Cancel'}</Button>
+          <Button 
+             onClick={handleProcessWithdrawal} 
+             variant="contained" 
+             disabled={savingWithdrawal} 
+             sx={{ 
+                bgcolor: withdrawalStatus === 'COMPLETED' ? palette.success : withdrawalStatus === 'REJECTED' ? palette.danger : palette.primary, 
+                color: withdrawalStatus === 'PROCESSING' ? '#000' : '#fff', 
+                fontWeight: 'bold' 
+             }}
+          >
+            {savingWithdrawal ? <CircularProgress size={20} sx={{color: '#fff'}}/> : (ar ? 'حفظ وتحديث الحالة' : 'Save & Update Status')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+    </Box>
+  );
+}
