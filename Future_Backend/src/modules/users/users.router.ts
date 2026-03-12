@@ -157,7 +157,6 @@ router.get('/', authenticate, requireManager, async (req: Request, res: Response
 });
 
 // ==================== ADMIN - Toggle User Status ====================
-// 🔴 تم تعديل الصلاحية لـ requireManager عشان المانجر يقدر يقفل أو يفتح حسابات (بناءً على طلبك يقدر يعدل المستخدمين)
 router.patch('/:userId/status', authenticate, requireManager, async (req: Request, res: Response, next: NextFunction) => {
   try {
     // لو المانجر بيحاول يعطل حساب أدمن، نمنعه
@@ -178,7 +177,6 @@ router.patch('/:userId/status', authenticate, requireManager, async (req: Reques
 });
 
 // ==================== ADMIN/MANAGER - Change User Role ====================
-// 🔴 هنا الشغل كله: تم تعديل الصلاحية لـ requireManager وإضافة قيود الأمان
 router.patch('/:userId/role', authenticate, requireManager, [
   body('role').isIn(['ADMIN', 'MANAGER', 'INSPECTOR','USER']),
 ], handleValidation, async (req: Request, res: Response, next: NextFunction) => {
@@ -186,25 +184,19 @@ router.patch('/:userId/role', authenticate, requireManager, [
     const { userId } = req.params;
     const { role: newRole } = req.body;
     
-    // 1. نجيب اليوزر المستهدف من الداتابيز عشان نعرف رتبته الحالية
     const targetUser = await prisma.user.findUnique({ where: { id: userId } });
     if (!targetUser) throw new NotFoundError('User not found');
 
-    // 2. تطبيق القيود الصارمة لو اللي بيعمل الطلب MANAGER
     if (req.user!.role === 'MANAGER') {
-      
-      // أ) ممنوع يعدل رتبة حد هو أصلاً ADMIN
       if (targetUser.role === 'ADMIN') {
         throw new AppError(403, 'ليس لديك صلاحية لتعديل رتبة مدير النظام (ADMIN) 🔒');
       }
 
-      // ب) ممنوع يدي حد رتبة ADMIN أو MANAGER
       if (newRole === 'ADMIN' || newRole === 'MANAGER') {
         throw new AppError(403, 'صلاحياتك تسمح بالترقية إلى (Inspector أو User) فقط 🔒');
       }
     }
 
-    // 3. لو عدى من القيود، يتنفذ التعديل
     const user = await prisma.user.update({
       where: { id: userId },
       data: { role: newRole },
@@ -218,8 +210,8 @@ router.patch('/:userId/role', authenticate, requireManager, [
 // ==================== ADMIN - Refresh Affiliate Links ====================
 router.post('/admin/refresh-affiliate-links', authenticate, requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
+    // 🔴 التعديل هنا: غيرنا null لـ undefined للتايب سكريبت أو شلنا الفلتر وضيفنا التأكد تحت
     const users = await prisma.user.findMany({
-      where: { affiliateCode: { not: null } },
       select: { id: true, affiliateCode: true },
     });
 
