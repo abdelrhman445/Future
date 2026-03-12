@@ -7,13 +7,20 @@ import { config } from '../../config';
 // ==================== CORS ====================
 export const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman in dev)
-    if (!origin && config.server.isDev) return callback(null, true);
-    if (!origin) return callback(new Error('No origin'), false);
-    if (config.cors.allowedOrigins.includes(origin)) {
-      callback(null, true);
+    // السماح للطلبات اللي من غير أوريجين (زي بوستمان)
+    if (!origin) return callback(null, true);
+
+    // 🔴 ضفنا رابط فيرسل ورابط اللوكال هنا بشكل مباشر عشان نضمن إنهم يعدوا
+    const allowed = [
+      'http://localhost:3000',
+      'https://future-kohl.vercel.app' // رابط الفرونت بتاعك
+    ];
+
+    if (config.cors.allowedOrigins.includes(origin) || allowed.includes(origin)) {
+      callback(null, true); // عدي يا باشا
     } else {
-      callback(new Error(`CORS: Origin ${origin} not allowed`), false);
+      // 🔴 شلنا الـ new Error عشان هي دي اللي كانت بتعمل 500 Internal Server Error
+      callback(null, false); // اقفل الباب بسامح من غير ما تضرب إيرور 500
     }
   },
   credentials: true, // Required for cookies
