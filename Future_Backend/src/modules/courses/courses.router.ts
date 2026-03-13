@@ -133,7 +133,7 @@ router.get('/:slug', async (req: Request, res: Response, next: NextFunction) => 
 });
 
 //
-// ==================== AUTH - Course Content (Purchased Users) ====================
+// ==================== AUTH - Course Content (Purchased Users & Free Previews) ====================
 //
 router.get('/:courseId/content', authenticate, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -142,20 +142,21 @@ router.get('/:courseId/content', authenticate, async (req: Request, res: Respons
     const userId = req.user!.userId;
     const userRole = req.user!.role;
 
+    // 1. هل هو مدير؟
     const isPrivileged = userRole === 'ADMIN' || userRole === 'MANAGER';
 
+    // 2. هل هو اشترى الكورس؟
+    let hasPurchased = false;
     if (!isPrivileged) {
-
       const purchase = await prisma.userCourse.findUnique({
         where: { userId_courseId: { userId, courseId } }
       });
-
-      if (!purchase || purchase.status !== 'COMPLETED') {
-        throw new ForbiddenError('Purchase required to access this content');
+      if (purchase && purchase.status === 'COMPLETED') {
+        hasPurchased = true;
       }
-
     }
 
+    // 3. نجيب محتوى الكورس بالكامل
     const course = await prisma.course.findUnique({
       where: { id: courseId },
       include: {
@@ -170,20 +171,27 @@ router.get('/:courseId/content', authenticate, async (req: Request, res: Respons
 
     if (!course) throw new NotFoundError('Course not found');
 
+    // 4. نوزع الروابط بناءً على الصلاحيات أو إذا كانت المحاضرة مجانية
     const courseWithSignedUrls = {
       ...course,
       sections: course.sections.map(section => ({
         ...section,
-        lessons: section.lessons.map(lesson => ({
-          ...lesson,
-          videoUrl: lesson.videoUrl
-            ? generateSignedUrl({
-                resourceId: lesson.id,
-                resourceType: 'video',
-                userId
-              }).url
-            : null
-        }))
+        lessons: section.lessons.map(lesson => {
+          
+          // الشرط السحري: يقدر يشوف الفيديو لو مدير، أو مشتري، أو المحاضرة دي بالذات مجانية
+          const canWatchVideo = isPrivileged || hasPurchased || lesson.isFreePreview;
+
+          return {
+            ...lesson,
+            videoUrl: canWatchVideo && lesson.videoUrl
+              ? generateSignedUrl({
+                  resourceId: lesson.id,
+                  resourceType: 'video',
+                  userId
+                }).url
+              : null // لو مش مسموحله، الرابط يرجع فاضي عشان مايسرقوش
+          };
+        })
       }))
     };
 
