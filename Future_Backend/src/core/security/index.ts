@@ -7,18 +7,27 @@ import { config } from '../../config';
 // ==================== CORS ====================
 export const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman in dev)
-    if (!origin && config.server.isDev) return callback(null, true);
-    if (!origin) return callback(new Error('No origin'), false);
-    if (config.cors.allowedOrigins.includes(origin)) {
+    // 1. السماح للطلبات اللي من غير Origin (زي Postman أو سيرفرات تانية)
+    // مهم جداً عشان Heroku و Vercel يقدروا يكلموا بعض في بعض الحالات
+    if (!origin) return callback(null, true); 
+
+    const allowedOrigins = config.cors.allowedOrigins || [];
+
+    // 2. السماح المفتوح لروابط Vercel (سواء الرابط الأساسي أو الـ Preview)
+    const isVercel = origin.endsWith('.vercel.app');
+    const isAllowedCustom = allowedOrigins.includes(origin);
+
+    if (isAllowedCustom || isVercel) {
       callback(null, true);
     } else {
+      console.warn(`⚠️ CORS Blocked: ${origin}`);
       callback(new Error(`CORS: Origin ${origin} not allowed`), false);
     }
   },
   credentials: true, // Required for cookies
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+  // ضفنا هيدرز مهمة زي Accept و X-Requested-With عشان Axios ميضربش
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-Requested-With', 'Accept'],
   exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining'],
   maxAge: 86400, // 24 hours preflight cache
 };
@@ -28,10 +37,10 @@ export const helmetConfig = helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // اتعدلت عشان متعملش بلوك لبعض السكربتات
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", "https://*.vercel.app"], // السماح بالاتصال مع Vercel
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -103,7 +112,8 @@ export const mediaRateLimiter = rateLimit({
 
 // ==================== SECURITY MIDDLEWARE SETUP ====================
 export function setupSecurity(app: Express): void {
-  // Trust proxy (important for rate limiting behind reverse proxy like Nginx)
+  // Trust proxy (important for rate limiting behind reverse proxy like Nginx or Heroku Router)
+  // ده سطر سحري عشان الـ Rate Limit يشتغل صح على Heroku لأن هيروكو بيستخدم Proxies
   app.set('trust proxy', 1);
 
   // Helmet (security headers)
