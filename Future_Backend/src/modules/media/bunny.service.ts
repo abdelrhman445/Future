@@ -7,6 +7,7 @@ const BUNNY_CONFIG = {
   tokenAuthKey: process.env.BUNNY_TOKEN_KEY!,
   tokenExpiry: 60 * 60
 };
+
 // ==================== UPLOAD VIDEO ====================
 
 export async function uploadVideoToBunny(
@@ -123,18 +124,21 @@ export async function getVideoStatus(videoId: string) {
     throw new Error(await res.text());
   }
 
-  const data = await res.json();
+  // 🔴 التصحيح هنا: تحويل نوع الداتا لـ any عشان نتجاوز خطأ unknown
+  const data: any = await res.json();
 
-  const statusMap = {
-    0: "queued",
-    1: "processing",
-    2: "encoding",
-    3: "finished",
-    4: "error"
+  // 🔴 التصحيح هنا: تعريف نوع الماب عشان يقبل البحث جواه بأي قيمة
+  const statusMap: Record<string, string> = {
+    "0": "queued",
+    "1": "processing",
+    "2": "encoding",
+    "3": "finished",
+    "4": "error"
   };
 
   return {
-    status: statusMap[data.status] || "error",
+    // 🔴 التصحيح هنا: تحويل الـ status لـ نص عشان يطابق الـ Record
+    status: statusMap[String(data.status)] || "error",
     storageSize: data.storageSize,
     duration: data.length
   };
