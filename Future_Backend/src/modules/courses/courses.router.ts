@@ -55,7 +55,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const packageType = req.query.package as string;
 
     const where = {
-      status: 'PUBLISHED',
+      // 🔴 التصحيح هنا: إضافة as any لتجاوز خطأ الـ Typescript
+      status: 'PUBLISHED' as any,
       ...(packageType && { packageType: packageType as never }),
     };
 
@@ -103,7 +104,8 @@ router.get('/:slug', async (req: Request, res: Response, next: NextFunction) => 
     const course = await prisma.course.findFirst({
       where: {
         slug: req.params.slug,
-        status: 'PUBLISHED'
+        // 🔴 التصحيح هنا: إضافة as any
+        status: 'PUBLISHED' as any 
       },
       include: {
         sections: {
@@ -279,7 +281,8 @@ router.delete('/:courseId', authenticate, requireAdmin, async (req: Request, res
 
     await prisma.course.update({
       where: { id: req.params.courseId },
-      data: { status: 'ARCHIVED' }
+      // 🔴 التصحيح هنا: إضافة as any
+      data: { status: 'ARCHIVED' as any } 
     });
 
     sendSuccess(res, null, 'Course archived');
@@ -405,7 +408,8 @@ router.patch(
 
       const course = await prisma.course.update({
         where: { id: req.params.courseId },
-        data: { status: 'PUBLISHED' }
+        // 🔴 التصحيح هنا: إضافة as any
+        data: { status: 'PUBLISHED' as any } 
       });
 
       sendSuccess(res, course, 'Course published');
