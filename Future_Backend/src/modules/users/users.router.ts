@@ -157,7 +157,6 @@ router.get('/', authenticate, requireManager, async (req: Request, res: Response
 });
 
 // ==================== ADMIN - Toggle User Status ====================
-// 🔴 تم تعديل الصلاحية لـ requireManager عشان المانجر يقدر يقفل أو يفتح حسابات (بناءً على طلبك يقدر يعدل المستخدمين)
 router.patch('/:userId/status', authenticate, requireManager, async (req: Request, res: Response, next: NextFunction) => {
   try {
     // لو المانجر بيحاول يعطل حساب أدمن، نمنعه
@@ -178,7 +177,6 @@ router.patch('/:userId/status', authenticate, requireManager, async (req: Reques
 });
 
 // ==================== ADMIN/MANAGER - Change User Role ====================
-// 🔴 هنا الشغل كله: تم تعديل الصلاحية لـ requireManager وإضافة قيود الأمان
 router.patch('/:userId/role', authenticate, requireManager, [
   body('role').isIn(['ADMIN', 'MANAGER', 'INSPECTOR','USER']),
 ], handleValidation, async (req: Request, res: Response, next: NextFunction) => {
@@ -219,7 +217,7 @@ router.patch('/:userId/role', authenticate, requireManager, [
 router.post('/admin/refresh-affiliate-links', authenticate, requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const users = await prisma.user.findMany({
-      where: { affiliateCode: { not: null } },
+      where: { affiliateCode: { not: undefined } }, // 🔴 التصحيح هنا: undefined بدل null
       select: { id: true, affiliateCode: true },
     });
 
