@@ -125,7 +125,7 @@ export default function Navbar() {
 
             {/* 🔴 زر خدمة العملاء (Desktop) بيظهر في كل الحالات */}
             <Button
-              href="https://wa.me/201000000000" // 🔴 حط رقم الواتساب هنا
+              href="https://wa.me/201155242795" // 🔴 حط رقم الواتساب هنا
               target="_blank"
               rel="noopener noreferrer"
               sx={{
@@ -285,7 +285,7 @@ export default function Navbar() {
 
             {/* 🔴 زر خدمة العملاء (Mobile) بيظهر في كل الحالات */}
             <ListItem disablePadding sx={{ mb: 1 }}>
-              <ListItemButton component="a" href="https://wa.me/201000000000" target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)}
+              <ListItemButton component="a" href="https://wa.me/201155242795" target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)}
                 sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: 'rgba(37,211,102,0.1)' } }}>
                 <ListItemIcon sx={{ minWidth: 40, color: '#25D366' }}><SupportAgentRounded /></ListItemIcon>
                 <ListItemText primary={t.support} primaryTypographyProps={{ fontWeight: 700 }} />
