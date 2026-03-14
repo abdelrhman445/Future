@@ -241,104 +241,89 @@ export default router;
 
 // ============================================================================
 // 🔴 دالة توزيع الأرباح الشبكية (Multi-Tier Affiliate) لـ 3 مستويات فقط 🔴
-// تم التعديل لتسجيل العمولات بشكل صحيح ومطابق لاستدعاء لوحة المدير (courseId)
+// تم حل مشكلة التايب سكريبت والاعتماد على جدول AffiliateTracking
 // ============================================================================
 export async function distributeTieredCommissions(buyerId: string, amountPaid: number, courseId?: string) {
   
-  // 1. نجيب بيانات المشتري عشان نعرف مين اللي دعاه للمنصة
-  const buyer = await prisma.user.findUnique({ 
-    where: { id: buyerId } 
+  // ================= المستوى الأول (المباشر) - يأخذ 15% =================
+  // هنجيب حركة الإحالة بدل ما ندور جوه اليوزر
+  const level1Tracking = await prisma.affiliateTracking.findFirst({
+    where: { referredUserId: buyerId }
   });
 
-  // لو المستخدم لم يسجل عن طريق أحد، وقف الدالة
-  if (!buyer || !buyer.referredById) {
-    return; 
-  }
+  if (!level1Tracking) return; // المستخدم لم يسجل عن طريق إحالة
 
-  // ================= المستوى الأول (المباشر) - يأخذ 15% =================
-  const level1ReferrerId = buyer.referredById;
   const comm1 = amountPaid * 0.15; 
-
   if (comm1 > 0) {
     await prisma.$transaction([
       prisma.user.update({
-        where: { id: level1ReferrerId },
+        where: { id: level1Tracking.referrerId },
         data: { 
           pendingEarnings: { increment: comm1 },
           totalEarnings: { increment: comm1 } 
         }
       }),
-      // إنشاء حركة جديدة عشان تظهر للمسوق في الداشبورد بتاعته
-      prisma.affiliateTracking.create({
+      prisma.affiliateTracking.update({
+        where: { id: level1Tracking.id },
         data: { 
-          referrerId: level1ReferrerId,
-          referredUserId: buyerId,
+          commissionAmount: { increment: comm1 }, 
           courseId: courseId || null,
-          commissionAmount: comm1, 
           status: 'APPROVED' 
         }
       })
     ]);
-  }
 
-  // ================= المستوى الثاني (الشخص الذي دعا الشخص المباشر) - يأخذ 5% =================
-  const level1User = await prisma.user.findUnique({ 
-    where: { id: level1ReferrerId } 
-  });
-
-  if (level1User && level1User.referredById) {
-    const level2ReferrerId = level1User.referredById;
-    const comm2 = amountPaid * 0.05; 
-
-    if (comm2 > 0) {
-      await prisma.$transaction([
-        prisma.user.update({
-          where: { id: level2ReferrerId },
-          data: { 
-            pendingEarnings: { increment: comm2 },
-            totalEarnings: { increment: comm2 } 
-          }
-        }),
-        prisma.affiliateTracking.create({
-          data: { 
-            referrerId: level2ReferrerId,
-            referredUserId: buyerId,
-            courseId: courseId || null,
-            commissionAmount: comm2, 
-            status: 'APPROVED' 
-          }
-        })
-      ]);
-    }
-
-    // ================= المستوى الثالث (الشخص الذي دعا صاحب المستوى الثاني) - يأخذ 4% =================
-    const level2User = await prisma.user.findUnique({ 
-      where: { id: level2ReferrerId } 
+    // ================= المستوى الثاني - يأخذ 5% =================
+    const level2Tracking = await prisma.affiliateTracking.findFirst({
+      where: { referredUserId: level1Tracking.referrerId }
     });
 
-    if (level2User && level2User.referredById) {
-      const level3ReferrerId = level2User.referredById;
-      const comm3 = amountPaid * 0.04; 
-
-      if (comm3 > 0) {
+    if (level2Tracking) {
+      const comm2 = amountPaid * 0.05; 
+      if (comm2 > 0) {
         await prisma.$transaction([
           prisma.user.update({
-            where: { id: level3ReferrerId },
+            where: { id: level2Tracking.referrerId },
             data: { 
-              pendingEarnings: { increment: comm3 },
-              totalEarnings: { increment: comm3 } 
+              pendingEarnings: { increment: comm2 },
+              totalEarnings: { increment: comm2 } 
             }
           }),
-          prisma.affiliateTracking.create({
+          prisma.affiliateTracking.update({
+            where: { id: level2Tracking.id },
             data: { 
-              referrerId: level3ReferrerId,
-              referredUserId: buyerId,
-              courseId: courseId || null,
-              commissionAmount: comm3, 
+              commissionAmount: { increment: comm2 }, 
               status: 'APPROVED' 
             }
           })
         ]);
+
+        // ================= المستوى الثالث - يأخذ 4% =================
+        const level3Tracking = await prisma.affiliateTracking.findFirst({
+          where: { referredUserId: level2Tracking.referrerId }
+        });
+
+        if (level3Tracking) {
+          const comm3 = amountPaid * 0.04; 
+          if (comm3 > 0) {
+            await prisma.$transaction([
+              prisma.user.update({
+                where: { id: level3Tracking.referrerId },
+                data: { 
+                  pendingEarnings: { increment: comm3 },
+                  totalEarnings: { increment: comm3 } 
+                }
+              }),
+              prisma.affiliateTracking.update({
+                where: { id: level3Tracking.id },
+                data: { 
+                  commissionAmount: { increment: comm3 }, 
+                  status: 'APPROVED' 
+                }
+              })
+            ]);
+          }
+        }
       }
     }
   }
