@@ -9,7 +9,7 @@ import {
 } from '@mui/material';
 import {
   Menu as MenuIcon, Dashboard, Logout,
-  AdminPanelSettings, Language, BookmarkBorder, TrendingUp, CoPresent, School, ManageAccountsRounded, SupportAgentRounded
+  AdminPanelSettings, Language, BookmarkBorder, TrendingUp, CoPresent, School, ManageAccountsRounded, SupportAgentRounded, Assignment, LocalOfferRounded
 } from '@mui/icons-material';
 import { motion } from 'framer-motion'; 
 import { useAuthStore } from '@/store/auth.store';
@@ -26,6 +26,7 @@ const palette = {
   textMain: '#a8eff9',
   textSec: '#a0ddf1',
   danger: '#e62f76',
+  accent: '#f59e0b', // 🔴 لون مميز للباقات
 };
 
 export default function Navbar() {
@@ -44,16 +45,19 @@ export default function Navbar() {
   const t = {
     home: ar ? 'الرئيسية' : 'Home',
     allCourses: ar ? 'الكورسات' : 'Courses',
+    packages: ar ? 'الباقات' : 'Packages', 
     myCourses: ar ? 'الكورسات' : 'Courses', 
+    myPackages: ar ? 'باقاتي' : 'My Packages', // 🔴 الترجمة الجديدة
     login: ar ? 'دخول' : 'Login',
     register: ar ? 'إنشاء حساب' : 'Register',
     dashboard: ar ? 'لوحتي' : 'Dashboard',
     affiliate: ar ? 'برنامج الإحالة' : 'Affiliate',
     admin: ar ? 'الإدارة' : 'Admin',
     manager: ar ? 'لوحة المدير' : 'Manager Panel', 
-    inspector: ar ? 'لوحة المحاضر' : 'Inspector Panel',
+    inspector: ar ? 'طلبات المحاضرات' : 'Presentations',
+    evaluations: ar ? 'تقييم الطلاب' : 'Student Evaluations',
     logout: ar ? 'تسجيل الخروج' : 'Logout',
-    support: ar ? 'خدمة العملاء' : 'Customer Support', // 🔴 إضافة ترجمة خدمة العملاء
+    support: ar ? 'خدمة العملاء' : 'Customer Support', 
   };
 
   const handleLogout = async () => {
@@ -90,7 +94,7 @@ export default function Navbar() {
               <Image src="/logo.png" alt="Future Logo" width={38} height={38} style={{ objectFit: 'contain' }} priority />
             </Box>
             <Typography variant="h6" sx={{ fontWeight: 900, fontSize: 22, background: `linear-gradient(135deg, ${palette.primary}, ${palette.textMain})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: 0.5 }}>
-              {ar ? 'فيوتشر' : 'Future'}
+              {ar ? 'فيوتشر أكاديمي' : 'Future Academy'}
             </Typography>
           </Link>
 
@@ -101,10 +105,12 @@ export default function Navbar() {
                 ? [
                     { label: t.dashboard, href: `/${locale}/dashboard` }, 
                     { label: t.myCourses, href: `/${locale}/courses` }, 
+                    { label: t.packages, href: `/${locale}/packages` }, 
                   ]
                 : [
                     { label: t.home, href: `/${locale}` },
                     { label: t.allCourses, href: `/${locale}/courses` },
+                    { label: t.packages, href: `/${locale}/packages` }, 
                   ]
             ).map((link) => (
               <Button
@@ -123,9 +129,8 @@ export default function Navbar() {
               </Button>
             ))}
 
-            {/* 🔴 زر خدمة العملاء (Desktop) بيظهر في كل الحالات */}
             <Button
-              href="https://wa.me/201155242795" // 🔴 حط رقم الواتساب هنا
+              href="https://wa.me/201155242794" 
               target="_blank"
               rel="noopener noreferrer"
               sx={{
@@ -136,7 +141,7 @@ export default function Navbar() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 0.5,
-                '&:hover': { color: '#25D366', background: 'rgba(37,211,102,0.05)' } // لون الواتساب
+                '&:hover': { color: '#25D366', background: 'rgba(37,211,102,0.05)' } 
               }}
             >
               <SupportAgentRounded fontSize="small" />
@@ -177,6 +182,11 @@ export default function Navbar() {
                     <School sx={{ mr: 1.5, fontSize: 20, color: palette.textMain }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.myCourses}</Typography>
                   </MenuItem>
 
+                  {/* 🔴 إضافة "باقاتي" هنا للمسجلين دخول (Desktop) */}
+                  <MenuItem component={Link} href={`/${locale}/my-packages`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
+                    <LocalOfferRounded sx={{ mr: 1.5, fontSize: 20, color: palette.accent }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.myPackages}</Typography>
+                  </MenuItem>
+
                   {hasAffiliate && (
                     <MenuItem component={Link} href={`/${locale}/affiliate`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
                       <TrendingUp sx={{ mr: 1.5, fontSize: 20, color: '#4ade80' }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.affiliate}</Typography>
@@ -184,9 +194,14 @@ export default function Navbar() {
                   )}
 
                   {isInspector && (
-                    <MenuItem component={Link} href={`/${locale}/inspector`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
-                      <CoPresent sx={{ mr: 1.5, fontSize: 20, color: palette.primaryHover }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.inspector}</Typography>
-                    </MenuItem>
+                    <Box>
+                      <MenuItem component={Link} href={`/${locale}/inspector`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
+                        <CoPresent sx={{ mr: 1.5, fontSize: 20, color: palette.primaryHover }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.inspector}</Typography>
+                      </MenuItem>
+                      <MenuItem component={Link} href={`/${locale}/inspector/evaluations`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
+                        <Assignment sx={{ mr: 1.5, fontSize: 20, color: palette.primaryHover }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.evaluations}</Typography>
+                      </MenuItem>
+                    </Box>
                   )}
 
                   {isAdmin && (
@@ -246,7 +261,6 @@ export default function Navbar() {
         </Toolbar>
 
         {/* Mobile Drawer */}
-        {/* 🔴 تعديل Drawer عشان يفتح من ناحية واحدة في اللغتين */}
         <Drawer anchor="left" open={mobileOpen} onClose={() => setMobileOpen(false)}
           PaperProps={{ sx: { background: palette.bg, width: 300, borderRight: `1px solid ${palette.cardBg}` } }}>
 
@@ -280,12 +294,18 @@ export default function Navbar() {
                     <ListItemText primary={t.allCourses} primaryTypographyProps={{ fontWeight: isActive(`/${locale}/courses`) ? 800 : 600, fontSize: '1.1rem' }} />
                   </ListItemButton>
                 </ListItem>
+
+                <ListItem disablePadding sx={{ mb: 1 }}>
+                  <ListItemButton component={Link} href={`/${locale}/packages`} onClick={() => setMobileOpen(false)}
+                    sx={{ borderRadius: 2, color: isActive(`/${locale}/packages`) ? palette.primary : palette.textSec, '&:hover': { background: palette.cardBg, color: palette.textMain } }}>
+                    <ListItemText primary={t.packages} primaryTypographyProps={{ fontWeight: isActive(`/${locale}/packages`) ? 800 : 600, fontSize: '1.1rem' }} />
+                  </ListItemButton>
+                </ListItem>
               </>
             )}
 
-            {/* 🔴 زر خدمة العملاء (Mobile) بيظهر في كل الحالات */}
             <ListItem disablePadding sx={{ mb: 1 }}>
-              <ListItemButton component="a" href="https://wa.me/201155242795" target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)}
+              <ListItemButton component="a" href="https://wa.me/201155242794" target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)}
                 sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: 'rgba(37,211,102,0.1)' } }}>
                 <ListItemIcon sx={{ minWidth: 40, color: '#25D366' }}><SupportAgentRounded /></ListItemIcon>
                 <ListItemText primary={t.support} primaryTypographyProps={{ fontWeight: 700 }} />
@@ -309,6 +329,15 @@ export default function Navbar() {
                     <ListItemText primary={t.myCourses} primaryTypographyProps={{ fontWeight: 700 }} />
                   </ListItemButton>
                 </ListItem>
+
+                {/* 🔴 إضافة "باقاتي" هنا للمسجلين دخول (Mobile) */}
+                <ListItem disablePadding sx={{ mb: 1 }}>
+                  <ListItemButton component={Link} href={`/${locale}/my-packages`} onClick={() => setMobileOpen(false)}
+                    sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>
+                    <ListItemIcon sx={{ minWidth: 40, color: palette.accent }}><LocalOfferRounded /></ListItemIcon>
+                    <ListItemText primary={t.myPackages} primaryTypographyProps={{ fontWeight: 700 }} />
+                  </ListItemButton>
+                </ListItem>
                 
                 {hasAffiliate && (
                   <ListItem disablePadding sx={{ mb: 1 }}>
@@ -321,13 +350,22 @@ export default function Navbar() {
                 )}
 
                 {isInspector && (
-                  <ListItem disablePadding sx={{ mb: 1 }}>
-                    <ListItemButton component={Link} href={`/${locale}/inspector`} onClick={() => setMobileOpen(false)}
-                      sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>
-                      <ListItemIcon sx={{ minWidth: 40, color: palette.primaryHover }}><CoPresent /></ListItemIcon>
-                      <ListItemText primary={t.inspector} primaryTypographyProps={{ fontWeight: 700 }} />
-                    </ListItemButton>
-                  </ListItem>
+                  <>
+                    <ListItem disablePadding sx={{ mb: 1 }}>
+                      <ListItemButton component={Link} href={`/${locale}/inspector`} onClick={() => setMobileOpen(false)}
+                        sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>
+                        <ListItemIcon sx={{ minWidth: 40, color: palette.primaryHover }}><CoPresent /></ListItemIcon>
+                        <ListItemText primary={t.inspector} primaryTypographyProps={{ fontWeight: 700 }} />
+                      </ListItemButton>
+                    </ListItem>
+                    <ListItem disablePadding sx={{ mb: 1 }}>
+                      <ListItemButton component={Link} href={`/${locale}/inspector/evaluations`} onClick={() => setMobileOpen(false)}
+                        sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>
+                        <ListItemIcon sx={{ minWidth: 40, color: palette.primaryHover }}><Assignment /></ListItemIcon>
+                        <ListItemText primary={t.evaluations} primaryTypographyProps={{ fontWeight: 700 }} />
+                      </ListItemButton>
+                    </ListItem>
+                  </>
                 )}
 
                 {isAdmin && (

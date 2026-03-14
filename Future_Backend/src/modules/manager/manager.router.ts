@@ -1,5 +1,7 @@
-import { Router, Request, Response } from 'express';
-import prisma from '../../config/prisma'; 
+import { Router, Request, Response, NextFunction } from 'express';
+import prisma from '../../config/prisma';
+import { authenticate, requireManager } from '../../core/guards/auth.guard';
+import { AppError, sendSuccess } from '../../core/middlewares';
 
 const router = Router();
 
@@ -7,12 +9,12 @@ const router = Router();
 // 1. مسار البحث عن المستخدمين
 // GET /api/manager/users/search?q=email
 // ==========================================
-router.get('/users/search', async (req: Request, res: Response) => {
+router.get('/users/search', authenticate, requireManager, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const searchQuery = req.query.q as string;
     
     if (!searchQuery) {
-      return res.status(200).json({ data: [] });
+      return sendSuccess(res, []);
     }
 
     const users = await prisma.user.findMany({
@@ -20,7 +22,8 @@ router.get('/users/search', async (req: Request, res: Response) => {
         OR: [
           { email: { contains: searchQuery, mode: 'insensitive' } },
           { firstName: { contains: searchQuery, mode: 'insensitive' } },
-          { lastName: { contains: searchQuery, mode: 'insensitive' } }
+          { lastName: { contains: searchQuery, mode: 'insensitive' } },
+          { phone: { contains: searchQuery } }
         ]
       },
       select: {
@@ -32,23 +35,22 @@ router.get('/users/search', async (req: Request, res: Response) => {
       take: 10 // إرجاع 10 نتائج فقط لتسريع البحث
     });
 
-    res.status(200).json({ data: users });
+    sendSuccess(res, users);
   } catch (error) {
-    console.error('[Manager Search Error]:', error);
-    res.status(500).json({ message: 'حدث خطأ أثناء البحث عن المستخدم' });
+    next(error);
   }
 });
 
 // ==========================================
-// 2. مسار تفعيل الكورس وتوزيع العمولات
+// 2. مسار تفعيل الكورس الواحد وتوزيع العمولات
 // POST /api/manager/grant-course
 // ==========================================
-router.post('/grant-course', async (req: Request, res: Response) => {
+router.post('/grant-course', authenticate, requireManager, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userId, courseId } = req.body;
 
     if (!userId || !courseId) {
-      return res.status(400).json({ message: 'بيانات المستخدم أو الكورس مفقودة' });
+      throw new AppError(400, 'بيانات المستخدم أو الكورس مفقودة');
     }
 
     // 1. نجيب بيانات المستخدم والكورس من الداتابيز
@@ -56,7 +58,7 @@ router.post('/grant-course', async (req: Request, res: Response) => {
     const course = await prisma.course.findUnique({ where: { id: courseId } });
 
     if (!user || !course) {
-      return res.status(404).json({ message: 'المستخدم أو الكورس غير موجود' });
+      throw new AppError(404, 'المستخدم أو الكورس غير موجود');
     }
 
     // 2. نحدد السعر الفعلي للكورس
@@ -67,7 +69,6 @@ router.post('/grant-course', async (req: Request, res: Response) => {
     // 3. ننفذ العملية كلها في Transaction عشان نضمن الفلوس متضيعش وأمان البيانات
     await prisma.$transaction(async (tx) => {
       
-      // 🔴 السحر كله هنا: هنجيب حركة الإحالة الأول قبل ما نضيف الكورس
       // ================= المستوى الأول (المباشر) - 15% =================
       const level1Tracking = await tx.affiliateTracking.findFirst({
         where: { referredUserId: userId }
@@ -81,7 +82,7 @@ router.post('/grant-course', async (req: Request, res: Response) => {
           status: 'COMPLETED',
           amountPaid: actualPrice,
           paymentMethod: 'MANUAL_GRANT',
-          // 🔴 السطر ده اللي هيخلي "إجمالي المبيعات المحققة" تشتغل زي الفل!
+          // 🔴 السطر ده اللي بيخلي "إجمالي المبيعات المحققة" تشتغل
           affiliateTrackingId: level1Tracking ? level1Tracking.id : null
         }
       });
@@ -161,16 +162,139 @@ router.post('/grant-course', async (req: Request, res: Response) => {
       }
     });
 
-    res.status(200).json({ message: 'تم تفعيل الكورس وتوزيع العمولات بنجاح 🎉' });
+    sendSuccess(res, null, 'تم تفعيل الكورس وتوزيع العمولات بنجاح 🎉');
   } catch (error: any) {
-    console.error('[Manager Grant Course Error]:', error);
-    
-    // P2002 = خطأ تكرار البيانات في Prisma (الكورس مفعل مسبقاً)
     if (error.code === 'P2002') {
-      return res.status(400).json({ message: 'هذا الكورس مفعل بالفعل لهذا المستخدم 🔒' });
+      next(new AppError(400, 'هذا الكورس مفعل بالفعل لهذا المستخدم 🔒'));
+    } else {
+      next(error);
+    }
+  }
+});
+
+// ==========================================
+// 3. مسار تفعيل باقة كاملة وتوزيع العمولات
+// POST /api/manager/grant-package
+// ==========================================
+router.post('/grant-package', authenticate, requireManager, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId, packageId } = req.body;
+
+    if (!userId || !packageId) {
+      throw new AppError(400, 'بيانات المستخدم أو الباقة مفقودة');
     }
 
-    res.status(500).json({ message: 'حدث خطأ أثناء تفعيل الكورس وتوزيع العمولات' });
+    const pkg = await prisma.package.findUnique({ where: { id: packageId } });
+    if (!pkg) throw new AppError(404, 'الباقة غير موجودة');
+
+    // المترجم الذكي للباقات
+    let packageTypeEnum: any = null;
+    const nameStr = pkg.name.toLowerCase();
+
+    if (nameStr.includes('basic') || nameStr.includes('بيزك')) packageTypeEnum = 'BASIC';
+    else if (nameStr.includes('standard') || nameStr.includes('ستاندر')) packageTypeEnum = 'STANDARD';
+    else if (nameStr.includes('premium') || nameStr.includes('بريميوم') || nameStr.includes('بريميم')) packageTypeEnum = 'PREMIUM';
+    else if (nameStr.includes('enterprise') || nameStr.includes('انتربرايز')) packageTypeEnum = 'ENTERPRISE';
+    else {
+        const exactMatch = ['BASIC', 'STANDARD', 'PREMIUM', 'ENTERPRISE'].find(e => e === pkg.name.toUpperCase());
+        if (exactMatch) packageTypeEnum = exactMatch;
+        else throw new AppError(400, 'اسم الباقة يجب أن يحتوي على (Basic, Standard, Premium, Enterprise) أو ما يقابلها بالعربي.');
+    }
+
+    const courses = await prisma.course.findMany({ where: { packageType: packageTypeEnum } });
+
+    if (courses.length === 0) throw new AppError(400, 'لا توجد كورسات مرتبطة بهذه الباقة حالياً ⚠️');
+
+    const pricePerCourse = pkg.price / courses.length;
+
+    // 🔴 ننفذ العملية كلها في Transaction زي الكورس بالظبط
+    await prisma.$transaction(async (tx) => {
+      
+      // ================= المستوى الأول (المباشر) =================
+      const level1Tracking = await tx.affiliateTracking.findFirst({
+        where: { referredUserId: userId }
+      });
+
+      // 1. تفعيل كل الكورسات للمستخدم وربطها بالمسوق عشان المبيعات تسمع
+      await Promise.all(courses.map(c => 
+        tx.userCourse.upsert({
+          where: { userId_courseId: { userId, courseId: c.id } },
+          update: { 
+            status: 'COMPLETED', 
+            amountPaid: pricePerCourse, 
+            paymentMethod: 'MANUAL_PACKAGE_GRANT',
+            // 🔴 ربط التحديث بالمسوق
+            affiliateTrackingId: level1Tracking ? level1Tracking.id : null 
+          },
+          create: { 
+            userId, 
+            courseId: c.id, 
+            status: 'COMPLETED', 
+            amountPaid: pricePerCourse, 
+            paymentMethod: 'MANUAL_PACKAGE_GRANT',
+            // 🔴 ربط الإنشاء بالمسوق
+            affiliateTrackingId: level1Tracking ? level1Tracking.id : null 
+          }
+        })
+      ));
+
+      // 2. توزيع العمولات على 3 مستويات (15%، 5%، 4%) بناءً على سعر الباقة
+      if (level1Tracking) {
+        const comm1 = pkg.price * 0.15;
+        if (comm1 > 0) {
+          await tx.user.update({
+            where: { id: level1Tracking.referrerId },
+            data: { pendingEarnings: { increment: comm1 }, totalEarnings: { increment: comm1 } }
+          });
+          await tx.affiliateTracking.update({
+            where: { id: level1Tracking.id },
+            data: { commissionAmount: { increment: comm1 }, status: 'APPROVED' }
+          });
+
+          // ================= المستوى الثاني =================
+          const level2Tracking = await tx.affiliateTracking.findFirst({
+            where: { referredUserId: level1Tracking.referrerId }
+          });
+
+          if (level2Tracking) {
+            const comm2 = pkg.price * 0.05;
+            if (comm2 > 0) {
+              await tx.user.update({
+                where: { id: level2Tracking.referrerId },
+                data: { pendingEarnings: { increment: comm2 }, totalEarnings: { increment: comm2 } }
+              });
+              await tx.affiliateTracking.update({
+                where: { id: level2Tracking.id },
+                data: { commissionAmount: { increment: comm2 }, status: 'APPROVED' }
+              });
+
+              // ================= المستوى الثالث =================
+              const level3Tracking = await tx.affiliateTracking.findFirst({
+                where: { referredUserId: level2Tracking.referrerId }
+              });
+
+              if (level3Tracking) {
+                const comm3 = pkg.price * 0.04;
+                if (comm3 > 0) {
+                  await tx.user.update({
+                    where: { id: level3Tracking.referrerId },
+                    data: { pendingEarnings: { increment: comm3 }, totalEarnings: { increment: comm3 } }
+                  });
+                  await tx.affiliateTracking.update({
+                    where: { id: level3Tracking.id },
+                    data: { commissionAmount: { increment: comm3 }, status: 'APPROVED' }
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    sendSuccess(res, null, `تم تفعيل باقة ${pkg.name} (${courses.length} كورسات) وتوزيع العمولات والمبيعات بنجاح 🎉`);
+  } catch (err) {
+    next(err);
   }
 });
 

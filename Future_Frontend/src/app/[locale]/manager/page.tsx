@@ -6,16 +6,16 @@ import {
   Box, Container, Typography, Grid, Card, TextField, Button,
   CircularProgress, alpha, List, ListItem, ListItemText, ListItemAvatar,
   Avatar, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-  InputAdornment, Chip
+  InputAdornment, Chip, ToggleButton, ToggleButtonGroup
 } from '@mui/material';
 import {
   SearchRounded, ManageAccountsRounded, LockOpenRounded,
-  CheckCircleRounded, CloseRounded, AutoAwesomeRounded
+  CheckCircleRounded, CloseRounded, AutoAwesomeRounded, LocalOfferRounded, SchoolRounded
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import Navbar from '@/components/layout/Navbar';
-import { coursesApi, managerApi } from '@/lib/api'; 
+import { coursesApi, managerApi, packagesApi } from '@/lib/api'; 
 import { useAuthStore } from '@/store/auth.store';
 import toast from 'react-hot-toast';
 
@@ -30,6 +30,7 @@ const palette = {
   textSec: '#a0ddf1',
   success: '#4ade80',
   danger: '#e62f76',
+  accent: '#f59e0b',
 };
 
 export default function ManagerDashboard() {
@@ -47,31 +48,45 @@ export default function ManagerDashboard() {
 
   // Modal States
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  
+  // 🔴 إضافة نوع التفعيل (كورس ولا باقة)
+  const [grantType, setGrantType] = useState('COURSE'); // 'COURSE' or 'PACKAGE'
+  
   const [courses, setCourses] = useState<any[]>([]);
-  const [loadingCourses, setLoadingCourses] = useState(false);
+  const [packages, setPackages] = useState<any[]>([]);
+  const [loadingItems, setLoadingItems] = useState(false);
   const [grantingId, setGrantingId] = useState<string | null>(null);
   
-  // 🔴 لحفظ الكورسات اللي اتفعلت في الجلسة الحالية عشان نعطل زرايرها
-  const [grantedCourses, setGrantedCourses] = useState<string[]>([]);
+  // لحفظ الكورسات/الباقات اللي اتفعلت في الجلسة الحالية عشان نعطل زرايرها
+  const [grantedItems, setGrantedItems] = useState<string[]>([]);
 
   useEffect(() => {
     setIsMounted(true);
-    if (isAuthenticated && user?.role !== 'MANAGER') {
-      toast.error(ar ? 'عفواً، هذه الصفحة مخصصة للمديرين فقط!' : 'Access Denied: Managers Only!');
+    if (isAuthenticated && user?.role !== 'MANAGER' && user?.role !== 'ADMIN') {
+      toast.error(ar ? 'عفواً، هذه الصفحة مخصصة للإدارة فقط!' : 'Access Denied: Managers Only!');
       router.replace(`/${locale}/dashboard`);
     }
   }, [isAuthenticated, user, router, locale, ar]);
 
-  const fetchCoursesList = async () => {
-    if (courses.length > 0) return;
-    setLoadingCourses(true);
+  // 🔴 دالة جلب العناصر بناءً على التاب المحدد (الكورسات أو الباقات)
+  const fetchItemsList = async (type: string) => {
+    setLoadingItems(true);
     try {
-      const res = await coursesApi.list();
-      setCourses(res.data?.data?.courses || []);
+      if (type === 'COURSE') {
+        if (courses.length === 0) {
+          const res = await coursesApi.list();
+          setCourses(res.data?.data?.courses || res.data?.courses || []);
+        }
+      } else {
+        if (packages.length === 0) {
+          const res = await packagesApi.list();
+          setPackages(res.data?.data || res.data || []);
+        }
+      }
     } catch (err) {
-      toast.error(ar ? 'فشل جلب الكورسات' : 'Failed to load courses');
+      toast.error(ar ? 'فشل جلب البيانات' : 'Failed to load data');
     }
-    setLoadingCourses(false);
+    setLoadingItems(false);
   };
 
   const handleSearch = async (e?: React.FormEvent) => {
@@ -98,27 +113,42 @@ export default function ManagerDashboard() {
 
   const openGrantModal = (usr: any) => {
     setSelectedUser(usr);
-    setGrantedCourses([]); // تصفير الكورسات المتفعلة لما نفتح يوزر جديد
-    fetchCoursesList();
+    setGrantedItems([]); // تصفير العناصر المتفعلة لما نفتح يوزر جديد
+    setGrantType('COURSE'); // الافتراضي كورسات
+    fetchItemsList('COURSE');
   };
 
-  const handleGrantAccess = async (courseId: string) => {
+  // 🔴 تغيير التاب (كورس/باقة)
+  const handleTypeChange = (event: React.MouseEvent<HTMLElement>, newType: string) => {
+    if (newType !== null) {
+      setGrantType(newType);
+      fetchItemsList(newType);
+    }
+  };
+
+  // 🔴 دالة التفعيل الموحدة
+  const handleGrantAccess = async (itemId: string) => {
     if (!selectedUser) return;
-    setGrantingId(courseId);
+    setGrantingId(itemId);
     try {
-      await managerApi.grantCourseAccess(selectedUser.id, courseId);
-      toast.success(ar ? `تم تفعيل الكورس للمستخدم ${selectedUser.firstName} بنجاح! 🎉` : `Course unlocked for ${selectedUser.firstName}! 🎉`);
+      if (grantType === 'COURSE') {
+        await managerApi.grantCourseAccess(selectedUser.id, itemId);
+        toast.success(ar ? `تم تفعيل الكورس واحتساب العمولات بنجاح! 🎉` : `Course unlocked and commissions calculated! 🎉`);
+      } else {
+        await managerApi.grantPackageAccess(selectedUser.id, itemId);
+        toast.success(ar ? `تم تفعيل الباقة واحتساب العمولات بنجاح! 🎉` : `Package unlocked and commissions calculated! 🎉`);
+      }
       
-      // 🔴 إضافة الكورس لقائمة الكورسات المُفعلة عشان نعطل الزرار
-      setGrantedCourses((prev) => [...prev, courseId]);
+      // إضافة العنصر لقائمة المُفعلة عشان نعطل الزرار
+      setGrantedItems((prev) => [...prev, itemId]);
       
     } catch (err: any) {
-      toast.error(err.response?.data?.message || (ar ? 'فشل تفعيل الكورس' : 'Failed to unlock course'));
+      toast.error(err.response?.data?.message || (ar ? 'فشل التفعيل' : 'Failed to grant access'));
     }
     setGrantingId(null);
   };
 
-  if (!isMounted || user?.role !== 'MANAGER') {
+  if (!isMounted) {
     return (
       <Box sx={{ minHeight: '100vh', background: palette.bg, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <CircularProgress sx={{ color: palette.primary }} />
@@ -144,7 +174,7 @@ export default function ManagerDashboard() {
             {ar ? 'لوحة تحكم المدير' : 'Manager Dashboard'}
           </Typography>
           <Typography sx={{ color: palette.textSec, fontSize: '1.1rem' }}>
-            {ar ? 'ابحث عن المستخدمين وقم بتفعيل الكورسات لهم مباشرة' : 'Search users and manually unlock courses for them'}
+            {ar ? 'ابحث عن المستخدمين وقم بتفعيل الكورسات والباقات لهم مباشرة' : 'Search users and manually unlock courses and packages for them'}
           </Typography>
         </Box>
 
@@ -187,18 +217,17 @@ export default function ManagerDashboard() {
                         primaryTypographyProps={{ color: '#fff', fontWeight: 800 }}
                         secondaryTypographyProps={{ color: palette.textSec }}
                       />
-                      {/* 🔴 الحل الجذري لمسافة الأيقونة (إلغاء startIcon واستخدام flex) */}
                       <Button 
                         onClick={() => openGrantModal(usr)}
                         variant="outlined" 
                         sx={{ 
                           borderColor: palette.primary, color: palette.primary, fontWeight: 800, borderRadius: 3, textTransform: 'none', 
-                          display: 'flex', alignItems: 'center', gap: 1, // 🔴 المسافة هنا
+                          display: 'flex', alignItems: 'center', gap: 1, 
                           '&:hover': { background: alpha(palette.primary, 0.1), borderColor: palette.primaryHover, color: palette.primaryHover } 
                         }}
                       >
                         <LockOpenRounded fontSize="small" />
-                        <Box component="span">{ar ? 'تفعيل كورس' : 'Unlock Course'}</Box>
+                        <Box component="span">{ar ? 'تفعيل اشتراك' : 'Grant Access'}</Box>
                       </Button>
                     </ListItem>
                     {idx < usersList.length - 1 && <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)' }} />}
@@ -211,13 +240,13 @@ export default function ManagerDashboard() {
 
       </Container>
 
-      {/* ================= GRANT COURSE MODAL ================= */}
+      {/* ================= GRANT ACCESS MODAL ================= */}
       <Dialog 
         open={Boolean(selectedUser)} onClose={() => !grantingId && setSelectedUser(null)}
         PaperProps={{ sx: { background: `linear-gradient(180deg, ${palette.cardBg}, #000)`, backdropFilter: 'blur(20px)', border: `1px solid ${alpha(palette.border, 0.4)}`, borderRadius: 5, minWidth: { xs: '95%', sm: 500 }, p: 1, boxShadow: `0 30px 60px rgba(0,0,0,0.8)` } }}
       >
         <DialogTitle sx={{ color: '#fff', fontWeight: 900, display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 2 }}>
-          {ar ? 'اختر الكورس للتفعيل' : 'Select Course to Unlock'}
+          {ar ? 'تفعيل اشتراك للمستخدم' : 'Grant Access to User'}
           <IconButton onClick={() => setSelectedUser(null)} disabled={Boolean(grantingId)} sx={{ color: palette.textSec, '&:hover': { background: alpha(palette.danger, 0.2), color: palette.danger } }}><CloseRounded /></IconButton>
         </DialogTitle>
 
@@ -227,43 +256,81 @@ export default function ManagerDashboard() {
             <Typography sx={{ color: '#fff', fontWeight: 800 }}>{selectedUser?.firstName} {selectedUser?.lastName} ({selectedUser?.email})</Typography>
           </Box>
 
-          {loadingCourses ? (
+          {/* 🔴 اختيار نوع التفعيل (كورس أو باقة) */}
+          <ToggleButtonGroup 
+            color="primary" value={grantType} exclusive onChange={handleTypeChange} 
+            sx={{ mb: 3, width: '100%', '& .MuiToggleButton-root': { color: palette.textSec, borderColor: alpha(palette.border, 0.5), flex: 1, fontWeight: 'bold', '&.Mui-selected': { bgcolor: alpha(palette.primary, 0.2), color: palette.primary, borderColor: palette.primary } } }}
+          >
+            <ToggleButton value="COURSE" sx={{ display: 'flex', gap: 1 }}>
+              <SchoolRounded fontSize="small" /> {ar ? 'كورس مفرد' : 'Single Course'}
+            </ToggleButton>
+            <ToggleButton value="PACKAGE" sx={{ display: 'flex', gap: 1 }}>
+              <LocalOfferRounded fontSize="small" /> {ar ? 'باقة كاملة' : 'Full Package'}
+            </ToggleButton>
+          </ToggleButtonGroup>
+
+          {loadingItems ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress sx={{ color: palette.primary }} /></Box>
           ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxHeight: '50vh', overflowY: 'auto', pr: 1, '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-thumb': { background: alpha(palette.primary, 0.3), borderRadius: '10px' } }}>
-              {courses.map((c) => {
-                // 🔴 نتحقق هل الكورس ده اتفعل في الجلسة دي ولا لسة؟
-                const isGranted = grantedCourses.includes(c.id);
-
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxHeight: '45vh', overflowY: 'auto', pr: 1, '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-thumb': { background: alpha(palette.primary, 0.3), borderRadius: '10px' } }}>
+              
+              {/* عرض الكورسات */}
+              {grantType === 'COURSE' && courses.map((c) => {
+                const isGranted = grantedItems.includes(c.id);
                 return (
                   <Box key={c.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, background: 'rgba(255,255,255,0.03)', borderRadius: 3, border: `1px solid rgba(255,255,255,0.05)`, transition: '0.3s', '&:hover': { background: 'rgba(255,255,255,0.06)', borderColor: alpha(palette.primary, 0.3) } }}>
                     <Box>
                       <Typography sx={{ color: '#fff', fontWeight: 800, mb: 0.5 }}>{c.title}</Typography>
-                      <Chip label={c.packageType} size="small" sx={{ background: alpha(palette.primary, 0.1), color: palette.primary, fontSize: '0.7rem', height: 20 }} />
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Chip label={c.packageType} size="small" sx={{ background: alpha(palette.primary, 0.1), color: palette.primary, fontSize: '0.7rem', height: 20 }} />
+                        <Typography sx={{ color: palette.success, fontWeight: 900, fontSize: '0.85rem' }}>${c.salePrice || c.originalPrice}</Typography>
+                      </Box>
                     </Box>
                     <Button
-                      onClick={() => handleGrantAccess(c.id)}
-                      disabled={grantingId === c.id || isGranted} // 🔴 تعطل الزرار لو بيحمل أو لو اتفعل خلاص
-                      variant="contained" size="small"
+                      onClick={() => handleGrantAccess(c.id)} disabled={grantingId === c.id || isGranted} variant="contained" size="small"
                       sx={{ 
-                        background: isGranted ? alpha(palette.success, 0.2) : `linear-gradient(135deg, ${palette.success}, #16a34a)`, 
-                        color: isGranted ? palette.success : '#fff', 
-                        fontWeight: 800, borderRadius: 2, textTransform: 'none', 
-                        '&:hover': { transform: isGranted ? 'none' : 'scale(1.05)' },
-                        '&.Mui-disabled': { background: isGranted ? alpha(palette.success, 0.2) : 'rgba(255,255,255,0.1)', color: isGranted ? palette.success : palette.textSec }
+                        background: isGranted ? alpha(palette.success, 0.2) : `linear-gradient(135deg, ${palette.success}, #16a34a)`, color: isGranted ? palette.success : '#fff', fontWeight: 800, borderRadius: 2, textTransform: 'none', 
+                        '&:hover': { transform: isGranted ? 'none' : 'scale(1.05)' }, '&.Mui-disabled': { background: isGranted ? alpha(palette.success, 0.2) : 'rgba(255,255,255,0.1)', color: isGranted ? palette.success : palette.textSec }
                       }}
                     >
-                      {grantingId === c.id 
-                        ? <CircularProgress size={18} color="inherit" /> 
-                        : isGranted 
-                          ? (ar ? 'مُفعَّل ✅' : 'Unlocked ✅') 
-                          : (ar ? 'تفعيل الان' : 'Unlock Now')}
+                      {grantingId === c.id ? <CircularProgress size={18} color="inherit" /> : isGranted ? (ar ? 'مُفعَّل ✅' : 'Unlocked ✅') : (ar ? 'تفعيل' : 'Unlock')}
                     </Button>
                   </Box>
                 );
               })}
-              {courses.length === 0 && (
-                <Typography sx={{ color: palette.textSec, textAlign: 'center', py: 3 }}>{ar ? 'لا توجد كورسات متاحة' : 'No courses available'}</Typography>
+
+              {/* عرض الباقات */}
+              {grantType === 'PACKAGE' && packages.map((pkg) => {
+                const isGranted = grantedItems.includes(pkg.id);
+                return (
+                  <Box key={pkg.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, background: 'rgba(255,255,255,0.03)', borderRadius: 3, border: `1px solid rgba(255,255,255,0.05)`, transition: '0.3s', '&:hover': { background: 'rgba(255,255,255,0.06)', borderColor: alpha(palette.accent, 0.3) } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Avatar src={pkg.thumbnailUrl} variant="rounded" sx={{ width: 40, height: 40, border: `1px solid ${palette.border}` }} />
+                      <Box>
+                        <Typography sx={{ color: '#fff', fontWeight: 800, mb: 0.5 }}>{pkg.name}</Typography>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          <Typography sx={{ color: palette.textSec, fontSize: '0.8rem' }}>{pkg.coursesCount} {ar ? 'كورسات' : 'Courses'}</Typography>
+                          <Typography sx={{ color: palette.accent, fontWeight: 900, fontSize: '0.85rem' }}>${pkg.price}</Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                    <Button
+                      onClick={() => handleGrantAccess(pkg.id)} disabled={grantingId === pkg.id || isGranted} variant="contained" size="small"
+                      sx={{ 
+                        background: isGranted ? alpha(palette.success, 0.2) : `linear-gradient(135deg, ${palette.accent}, #d97706)`, color: isGranted ? palette.success : '#000', fontWeight: 900, borderRadius: 2, textTransform: 'none', 
+                        '&:hover': { transform: isGranted ? 'none' : 'scale(1.05)' }, '&.Mui-disabled': { background: isGranted ? alpha(palette.success, 0.2) : 'rgba(255,255,255,0.1)', color: isGranted ? palette.success : palette.textSec }
+                      }}
+                    >
+                      {grantingId === pkg.id ? <CircularProgress size={18} color="inherit" /> : isGranted ? (ar ? 'مُفعَّل ✅' : 'Unlocked ✅') : (ar ? 'تفعيل الباقة' : 'Unlock Pkg')}
+                    </Button>
+                  </Box>
+                );
+              })}
+
+              {((grantType === 'COURSE' && courses.length === 0) || (grantType === 'PACKAGE' && packages.length === 0)) && (
+                <Typography sx={{ color: palette.textSec, textAlign: 'center', py: 3 }}>
+                  {ar ? 'لا توجد بيانات متاحة' : 'No data available'}
+                </Typography>
               )}
             </Box>
           )}

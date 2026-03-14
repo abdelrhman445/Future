@@ -35,7 +35,15 @@ router.get('/admin/all', authenticate, requireManager, async (req: Request, res:
         level: true,
         commissionRate: true,
         status: true,
-        createdAt: true
+        createdAt: true,
+        // 🔴🔴 الحل هنا: جلب بيانات المحاضرين عشان تظهر في الجدول
+        inspectors: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        }
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -55,7 +63,6 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const packageType = req.query.package as string;
 
     const where = {
-      // 🔴 التصحيح هنا: إضافة as any لتجاوز خطأ الـ Typescript
       status: 'PUBLISHED' as any,
       ...(packageType && { packageType: packageType as never }),
     };
@@ -104,7 +111,6 @@ router.get('/:slug', async (req: Request, res: Response, next: NextFunction) => 
     const course = await prisma.course.findFirst({
       where: {
         slug: req.params.slug,
-        // 🔴 التصحيح هنا: إضافة as any
         status: 'PUBLISHED' as any 
       },
       include: {
@@ -122,7 +128,9 @@ router.get('/:slug', async (req: Request, res: Response, next: NextFunction) => 
             }
           },
           orderBy: { order: 'asc' }
-        }
+        },
+        // 🔴 جلب المحاضرين في صفحة الكورس العامة
+        inspectors: { select: { id: true, firstName: true, lastName: true } }
       }
     });
 
@@ -266,6 +274,36 @@ router.post(
 );
 
 //
+// ==================== ADMIN - Assign Inspectors to Course ====================
+// 🔴 إضافة جديدة: لتعيين المفتشين للكورسات
+//
+router.post('/:courseId/assign-inspectors', authenticate, requireAdmin, [
+  body('inspectorIds').isArray().withMessage('يجب إرسال مصفوفة بمعرفات المفتشين')
+], handleValidation, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { courseId } = req.params;
+    const { inspectorIds } = req.body;
+
+    const course = await prisma.course.findUnique({ where: { id: courseId } });
+    if (!course) throw new NotFoundError('الكورس غير موجود');
+
+    const updatedCourse = await prisma.course.update({
+      where: { id: courseId },
+      data: {
+        inspectors: {
+          set: inspectorIds.map((id: string) => ({ id })) 
+        }
+      },
+      include: {
+        inspectors: { select: { id: true, firstName: true, lastName: true } }
+      }
+    });
+
+    sendSuccess(res, updatedCourse, 'تم تحديث مفتشي الكورس بنجاح 🎉');
+  } catch (err) { next(err); }
+});
+
+//
 // ==================== ADMIN - Update Course ====================
 //
 router.patch('/:courseId', authenticate, requireManager, async (req: Request, res: Response, next: NextFunction) => {
@@ -289,7 +327,6 @@ router.delete('/:courseId', authenticate, requireAdmin, async (req: Request, res
 
     await prisma.course.update({
       where: { id: req.params.courseId },
-      // 🔴 التصحيح هنا: إضافة as any
       data: { status: 'ARCHIVED' as any } 
     });
 
@@ -378,7 +415,8 @@ router.patch('/lessons/:lessonId', authenticate, requireManager, [
 //
 // ==================== ADMIN - Pending Courses ====================
 //
-router.get('/admin/all', authenticate, requireManager, async (req, res, next) => {
+// 🔴 تم تصحيح هذا المسار ليصبح /admin/pending بدلاً من /admin/all لتجنب التضارب
+router.get('/admin/pending', authenticate, requireManager, async (req, res, next) => {
   try {
 
     const courses = await prisma.course.findMany({
@@ -404,6 +442,7 @@ router.get('/admin/all', authenticate, requireManager, async (req, res, next) =>
     next(err);
   }
 });
+
 //
 // ==================== ADMIN - Publish Course ====================
 //
@@ -416,7 +455,6 @@ router.patch(
 
       const course = await prisma.course.update({
         where: { id: req.params.courseId },
-        // 🔴 التصحيح هنا: إضافة as any
         data: { status: 'PUBLISHED' as any } 
       });
 
@@ -443,7 +481,9 @@ router.get(
               lessons: true
             },
             orderBy: { order: 'asc' }
-          }
+          },
+          // 🔴 جلب المحاضرين هنا أيضاً لضمان ظهورهم عند فتح نافذة التعديل
+          inspectors: { select: { id: true, firstName: true, lastName: true } }
         }
       });
 

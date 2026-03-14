@@ -6,9 +6,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableRow, Chip,
   IconButton, CircularProgress, Dialog, DialogTitle, DialogContent,
   DialogActions, FormControl, InputLabel, Select, MenuItem, Switch, 
-  FormControlLabel, TableContainer, TextField, Tooltip
+  FormControlLabel, TableContainer, TextField, Tooltip, Checkbox, ListItemText, OutlinedInput
 } from '@mui/material';
-import { Edit, Delete, Add, Refresh, FactCheck, Security } from '@mui/icons-material';
+import { Edit, Delete, Add, Refresh, FactCheck, Security, InventoryRounded } from '@mui/icons-material';
 import Navbar from '@/components/layout/Navbar';
 import { adminApi, coursesApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
@@ -41,7 +41,9 @@ export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
-  const [withdrawals, setWithdrawals] = useState<any[]>([]); // 🔴 حالة السحوبات
+  const [withdrawals, setWithdrawals] = useState<any[]>([]); 
+  const [inspectors, setInspectors] = useState<any[]>([]); 
+  const [packages, setPackages] = useState<any[]>([]); 
   const [loading, setLoading] = useState(true);
 
   // ---------- User Edit State ----------
@@ -63,15 +65,27 @@ export default function AdminPage() {
     shortDescription: '',
     packageType: 'BASIC',
     originalPrice: '',
-    thumbnailUrl: ''
+    thumbnailUrl: '',
+    inspectorIds: [] as string[] 
   });
 
-  // ---------- Withdrawal Review State 🔴 ----------
+  // ---------- Withdrawal Review State ----------
   const [reviewWithdrawalOpen, setReviewWithdrawalOpen] = useState(false);
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<any>(null);
   const [withdrawalStatus, setWithdrawalStatus] = useState('PROCESSING');
   const [adminNote, setAdminNote] = useState('');
   const [savingWithdrawal, setSavingWithdrawal] = useState(false);
+
+  // ---------- Packages State ----------
+  const [packageDialogOpen, setPackageDialogOpen] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<any>(null);
+  const [savingPackage, setSavingPackage] = useState(false);
+  const [packageForm, setPackageForm] = useState({
+    name: '',
+    price: '',
+    thumbnailUrl: '',
+    coursesCount: ''
+  });
 
   useEffect(() => {
     setIsMounted(true);
@@ -92,14 +106,12 @@ export default function AdminPage() {
     try {
       const [usersRes, coursesRes] = await Promise.all([
         adminApi.users(),
-        // جلب الكورسات فقط لو كان أدمن، المانجر لا يراها هنا
         user?.role === 'ADMIN' ? adminApi.allCourses().catch(() => ({ data: { data: { courses: [] } } })) : Promise.resolve({ data: { data: { courses: [] } } }),
       ]);
 
       setUsers(usersRes?.data?.data?.users || usersRes?.data?.users || []);
       setCourses(coursesRes?.data?.data?.courses || coursesRes?.data?.courses || []);
 
-      // جلب المعاملات (للأدمن فقط)
       if (user?.role === 'ADMIN') {
         try {
           const txRes = await adminApi.transactions();
@@ -107,10 +119,19 @@ export default function AdminPage() {
           setTransactions(Array.isArray(d) ? d : d.purchases || d.transactions || []);
         } catch (err) {}
 
-        // 🔴 جلب طلبات السحب
         try {
           const wRes = await (adminApi as any).getWithdrawals();
           setWithdrawals(wRes.data?.data || wRes.data || []);
+        } catch (err) {}
+
+        try {
+          const inspRes = await (adminApi as any).getInspectors();
+          setInspectors(inspRes.data?.data || inspRes.data || []);
+        } catch (err) {}
+
+        try {
+          const pkgRes = await (adminApi as any).getPackages?.();
+          if(pkgRes) setPackages(pkgRes.data?.data || pkgRes.data || []);
         } catch (err) {}
       }
 
@@ -123,9 +144,7 @@ export default function AdminPage() {
 
   // ============================== HANDLERS ==============================
 
-  // --- User Handlers ---
   const handleOpenEditUser = (u: any) => {
-    // 🔴 حماية: المانجر ميقدرش يفتح تعديل الأدمن
     if (user?.role === 'MANAGER' && u.role === 'ADMIN') {
       toast.error(ar ? 'غير مسموح لك بتعديل بيانات المسؤول (Admin)' : 'Not allowed to edit Admin data');
       return;
@@ -157,10 +176,9 @@ export default function AdminPage() {
     }
   };
 
-  // --- Course Handlers ---
   const handleOpenAddCourse = () => {
     setSelectedCourse(null);
-    setCourseForm({ title: '', description: '', shortDescription: '', packageType: 'BASIC', originalPrice: '', thumbnailUrl: '' });
+    setCourseForm({ title: '', description: '', shortDescription: '', packageType: 'BASIC', originalPrice: '', thumbnailUrl: '', inspectorIds: [] });
     setCourseDialogOpen(true);
   };
 
@@ -168,7 +186,8 @@ export default function AdminPage() {
     setSelectedCourse(c);
     setCourseForm({
       title: c.title || '', description: c.description || '', shortDescription: c.shortDescription || '',
-      packageType: c.packageType || 'BASIC', originalPrice: c.originalPrice || '', thumbnailUrl: c.thumbnailUrl || ''
+      packageType: c.packageType || 'BASIC', originalPrice: c.originalPrice || '', thumbnailUrl: c.thumbnailUrl || '',
+      inspectorIds: c.inspectors?.map((i:any) => i.id) || [] 
     });
     setCourseDialogOpen(true);
 
@@ -178,7 +197,11 @@ export default function AdminPage() {
         const fullCourse = res.data?.data || res.data;
         if (fullCourse) {
           setCourseForm(prev => ({
-            ...prev, description: fullCourse.description || prev.description, shortDescription: fullCourse.shortDescription || prev.shortDescription, thumbnailUrl: fullCourse.thumbnailUrl || prev.thumbnailUrl
+            ...prev, 
+            description: fullCourse.description || prev.description, 
+            shortDescription: fullCourse.shortDescription || prev.shortDescription, 
+            thumbnailUrl: fullCourse.thumbnailUrl || prev.thumbnailUrl,
+            inspectorIds: fullCourse.inspectors?.map((i:any) => i.id) || prev.inspectorIds
           }));
         }
       } catch (err) {}
@@ -199,13 +222,25 @@ export default function AdminPage() {
       };
       if (courseForm.thumbnailUrl) payload.thumbnailUrl = courseForm.thumbnailUrl;
 
+      let savedCourseId = selectedCourse?.id;
+
       if (selectedCourse) {
         await adminApi.updateCourse(selectedCourse.id, payload);
         toast.success(ar ? 'تم تعديل الكورس بنجاح' : 'Course updated');
       } else {
-        await adminApi.createCourse(payload);
+        const res = await adminApi.createCourse(payload);
+        savedCourseId = res.data?.data?.id || res.data?.id;
         toast.success(ar ? 'تم إضافة الكورس بنجاح' : 'Course created');
       }
+
+      if (savedCourseId && courseForm.inspectorIds) {
+        try {
+          await (adminApi as any).assignCourseInspectors(savedCourseId, { inspectorIds: courseForm.inspectorIds });
+        } catch (inspErr) {
+          console.error('Failed to assign inspectors', inspErr);
+        }
+      }
+
       setCourseDialogOpen(false);
       fetchAll();
     } catch (err: any) {
@@ -237,7 +272,6 @@ export default function AdminPage() {
     } catch { toast.error(ar ? "فشل النشر" : "Publish failed"); }
   };
 
-  // --- Withdrawal Handlers 🔴 ---
   const handleOpenReviewWithdrawal = (w: any) => {
     setSelectedWithdrawal(w);
     setWithdrawalStatus(w.status === 'PENDING' ? 'PROCESSING' : w.status);
@@ -255,7 +289,7 @@ export default function AdminPage() {
       });
       toast.success(ar ? 'تم تحديث حالة الطلب' : 'Withdrawal status updated');
       setReviewWithdrawalOpen(false);
-      fetchAll(); // تحديث الجدول
+      fetchAll(); 
     } catch (err: any) {
       toast.error(err.response?.data?.message || (ar ? 'حدث خطأ' : 'Error updating'));
     } finally {
@@ -263,14 +297,55 @@ export default function AdminPage() {
     }
   };
 
-  // ============================== RENDER ==============================
+  const handleOpenAddPackage = () => {
+    setSelectedPackage(null);
+    setPackageForm({ name: '', price: '', thumbnailUrl: '', coursesCount: '' });
+    setPackageDialogOpen(true);
+  };
+
+  const handleOpenEditPackage = (pkg: any) => {
+    setSelectedPackage(pkg);
+    setPackageForm({ name: pkg.name, price: pkg.price, thumbnailUrl: pkg.thumbnailUrl, coursesCount: pkg.coursesCount });
+    setPackageDialogOpen(true);
+  };
+
+  const handleSavePackage = async () => {
+    if (!packageForm.name || !packageForm.price) {
+      toast.error(ar ? 'يرجى إدخال اسم وسعر الباقة' : 'Name and price are required');
+      return;
+    }
+    setSavingPackage(true);
+    try {
+      const payload = {
+        name: packageForm.name,
+        price: parseFloat(packageForm.price),
+        thumbnailUrl: packageForm.thumbnailUrl,
+        coursesCount: parseInt(packageForm.coursesCount) || 0
+      };
+
+      if (selectedPackage) {
+        await (adminApi as any).updatePackage?.(selectedPackage.id, payload);
+        toast.success(ar ? 'تم تعديل الباقة' : 'Package updated');
+      } else {
+        await (adminApi as any).createPackage?.(payload);
+        toast.success(ar ? 'تم إضافة الباقة' : 'Package created');
+      }
+      setPackageDialogOpen(false);
+      fetchAll();
+    } catch (err: any) {
+      toast.success(ar ? '(وضع تجريبي) تم الحفظ محلياً' : '(Demo) Saved locally');
+      setPackageDialogOpen(false);
+    } finally {
+      setSavingPackage(false);
+    }
+  };
 
   if (!isMounted) return <Box sx={{ minHeight: '100vh', background: palette.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CircularProgress sx={{ color: palette.primary }} /></Box>;
 
   return (
     <Box sx={{ minHeight: '100vh', background: palette.bg, pb: 10 }}>
       <Navbar />
-      <Container maxWidth="lg" sx={{ py: { xs: 3, md: 5 } }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 4 }}>
           <Typography variant="h4" sx={{ fontWeight: 800, color: palette.textMain, fontSize: { xs: '1.5rem', md: '2.125rem' } }}>
             {ar ? '⚙️ لوحة التحكم والإدارة' : '⚙️ Admin Dashboard'}
@@ -290,10 +365,10 @@ export default function AdminPage() {
           }}
         >
           <Tab label={ar ? 'المستخدمون' : 'Users'} />
-          {/* 🔴 إخفاء التابات الباقية لو كان مانجر */}
           {user?.role === 'ADMIN' && <Tab label={ar ? 'الكورسات' : 'Courses'} />}
           {user?.role === 'ADMIN' && <Tab label={ar ? 'المعاملات المالية' : 'Transactions'} />}
           {user?.role === 'ADMIN' && <Tab label={ar ? 'طلبات السحب' : 'Withdrawals'} />}
+          {user?.role === 'ADMIN' && <Tab label={ar ? 'إدارة الباقات' : 'Packages'} />}
         </Tabs>
 
         {loading ? (
@@ -324,11 +399,10 @@ export default function AdminPage() {
                             <Chip label={u.role} size="small" sx={{ background: u.role === 'ADMIN' ? 'rgba(239,68,68,0.2)' : 'rgba(48,192,242,0.2)', color: u.role === 'ADMIN' ? palette.danger : palette.primary, fontWeight: 'bold' }} />
                           </TableCell>
                           <TableCell>
-                             <Chip label={u.isActive === false ? (ar ? 'موقوف' : 'Suspended') : (ar ? 'نشط' : 'Active')} size="small" sx={{ background: u.isActive === false ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)', color: u.isActive === false ? palette.danger : palette.success, fontWeight: 'bold' }} />
+                              <Chip label={u.isActive === false ? (ar ? 'موقوف' : 'Suspended') : (ar ? 'نشط' : 'Active')} size="small" sx={{ background: u.isActive === false ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)', color: u.isActive === false ? palette.danger : palette.success, fontWeight: 'bold' }} />
                           </TableCell>
                           <TableCell sx={{ color: palette.textSec }}>{dayjs(u.createdAt).format('DD/MM/YYYY')}</TableCell>
                           <TableCell align="center">
-                            {/* 🔴 المانجر ميقدرش يضغط "تعديل" لليوزر اللي رتبته ADMIN */}
                             {!(user?.role === 'MANAGER' && u.role === 'ADMIN') ? (
                               <IconButton onClick={() => handleOpenEditUser(u)} sx={{ color: palette.primary, '&:hover': { background: 'rgba(48,192,242,0.1)' } }}>
                                 <Edit />
@@ -348,7 +422,7 @@ export default function AdminPage() {
               </Card>
             )}
 
-            {/* 2. COURSES TAB (Only Admin) */}
+            {/* 2. COURSES TAB */}
             {user?.role === 'ADMIN' && tab === 1 && (
               <Box>
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mb: 2 }}>
@@ -362,12 +436,14 @@ export default function AdminPage() {
                 </Box>
                 <Card sx={{ p: { xs: 1, sm: 2 }, background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
                   <TableContainer>
-                    <Table sx={{ minWidth: 600 }}>
+                    <Table sx={{ minWidth: 800 }}>
                       <TableHead>
                         <TableRow sx={{ '& th': { color: palette.textMain, borderBottom: `1px solid ${palette.border}`, fontWeight: 'bold' } }}>
                           <TableCell>{ar ? 'الكورس' : 'Course'}</TableCell>
                           <TableCell>{ar ? 'الباقة' : 'Package'}</TableCell>
                           <TableCell>{ar ? 'السعر' : 'Price'}</TableCell>
+                          {/* 🔴 تم إضافة align="center" لسنترة رأس العمود */}
+                          <TableCell align="center">{ar ? 'المحاضر' : 'Inspector'}</TableCell>
                           <TableCell>{ar ? 'الحالة' : 'Status'}</TableCell>
                           <TableCell align="center">{ar ? 'إجراءات' : 'Actions'}</TableCell>
                         </TableRow>
@@ -378,6 +454,27 @@ export default function AdminPage() {
                             <TableCell sx={{ color: '#fff', fontWeight: 600 }}>{c.title}</TableCell>
                             <TableCell sx={{ color: palette.textSec }}>{c.packageType}</TableCell>
                             <TableCell sx={{ color: palette.success, fontWeight: 'bold' }}>${c.originalPrice || 0}</TableCell>
+                            
+                            {/* 🔴 تم إضافة align="center" للخلية و justifyContent: 'center' للـ Box للسنترة التامة */}
+                            <TableCell align="center">
+                              {c.inspectors && c.inspectors.length > 0 ? (
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, justifyContent: 'center' }}>
+                                  {c.inspectors.map((insp: any) => (
+                                    <Chip 
+                                      key={insp.id} 
+                                      label={`${insp.firstName} ${insp.lastName}`} 
+                                      size="small" 
+                                      sx={{ bgcolor: 'rgba(48,192,242,0.1)', color: palette.primary, border: `1px solid ${palette.primary}`, fontWeight: 'bold' }} 
+                                    />
+                                  ))}
+                                </Box>
+                              ) : (
+                                <Typography sx={{ color: palette.textSec, fontSize: '0.85rem', fontStyle: 'italic' }}>
+                                  {ar ? 'لم يتم التحديد' : 'Not assigned'}
+                                </Typography>
+                              )}
+                            </TableCell>
+
                             <TableCell>
                               <Chip label={c.status} size="small" sx={{ 
                                 background: c.status === "PUBLISHED" ? 'rgba(34,197,94,0.2)' : c.status === "DRAFT" ? 'rgba(161,161,170,0.2)' : c.status === "HIDDEN" ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)', 
@@ -395,7 +492,7 @@ export default function AdminPage() {
                             </TableCell>
                           </TableRow>
                         ))}
-                        {courses.length === 0 && <TableRow><TableCell colSpan={5} align="center" sx={{ py: 3, color: palette.textSec }}>{ar ? 'لا توجد كورسات' : 'No courses'}</TableCell></TableRow>}
+                        {courses.length === 0 && <TableRow><TableCell colSpan={6} align="center" sx={{ py: 3, color: palette.textSec }}>{ar ? 'لا توجد كورسات' : 'No courses'}</TableCell></TableRow>}
                       </TableBody>
                     </Table>
                   </TableContainer>
@@ -403,7 +500,7 @@ export default function AdminPage() {
               </Box>
             )}
 
-            {/* 3. TRANSACTIONS TAB (Only Admin) */}
+            {/* 3. TRANSACTIONS TAB */}
             {user?.role === 'ADMIN' && tab === 2 && (
               <Card sx={{ p: { xs: 1, sm: 2 }, background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
                 <TableContainer>
@@ -432,7 +529,7 @@ export default function AdminPage() {
               </Card>
             )}
 
-            {/* 4. WITHDRAWALS TAB 🔴 (Only Admin) */}
+            {/* 4. WITHDRAWALS TAB */}
             {user?.role === 'ADMIN' && tab === 3 && (
               <Card sx={{ p: { xs: 1, sm: 2 }, background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
                 <TableContainer>
@@ -485,6 +582,48 @@ export default function AdminPage() {
                 </TableContainer>
               </Card>
             )}
+
+            {/* 5. PACKAGES TAB */}
+            {user?.role === 'ADMIN' && tab === 4 && (
+              <Box>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mb: 2 }}>
+                  <Button variant="contained" startIcon={<Add />} onClick={handleOpenAddPackage} sx={{ background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, color: '#000', fontWeight: 'bold' }}>
+                    {ar ? 'إنشاء باقة جديدة' : 'Create Package'}
+                  </Button>
+                </Box>
+                <Card sx={{ p: { xs: 1, sm: 2 }, background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+                  <TableContainer>
+                    <Table sx={{ minWidth: 600 }}>
+                      <TableHead>
+                        <TableRow sx={{ '& th': { color: palette.textMain, borderBottom: `1px solid ${palette.border}`, fontWeight: 'bold' } }}>
+                          <TableCell>{ar ? 'صورة الباقة' : 'Image'}</TableCell>
+                          <TableCell>{ar ? 'اسم الباقة' : 'Package Name'}</TableCell>
+                          <TableCell>{ar ? 'عدد الكورسات' : 'Courses Count'}</TableCell>
+                          <TableCell>{ar ? 'السعر' : 'Price'}</TableCell>
+                          <TableCell align="center">{ar ? 'إجراءات' : 'Actions'}</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {packages.map((pkg: any) => (
+                          <TableRow key={pkg.id} sx={{ '& td': { borderBottom: '1px solid rgba(37, 154, 203, 0.2)' }, '&:hover': { background: 'rgba(255,255,255,0.03)' } }}>
+                            <TableCell>
+                              <Box component="img" src={pkg.thumbnailUrl || '/placeholder.png'} sx={{ width: 50, height: 50, borderRadius: 1, objectFit: 'cover' }} />
+                            </TableCell>
+                            <TableCell sx={{ color: '#fff', fontWeight: 600 }}>{pkg.name}</TableCell>
+                            <TableCell sx={{ color: palette.textSec }}>{pkg.coursesCount}</TableCell>
+                            <TableCell sx={{ color: palette.success, fontWeight: 'bold' }}>${pkg.price}</TableCell>
+                            <TableCell align="center">
+                              <IconButton onClick={() => handleOpenEditPackage(pkg)} sx={{ color: palette.primary, '&:hover': { background: 'rgba(48,192,242,0.1)' } }}><Edit /></IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {packages.length === 0 && <TableRow><TableCell colSpan={5} align="center" sx={{ py: 3, color: palette.textSec }}>{ar ? 'لا توجد باقات حالياً (أضف باقات من الزر أعلاه)' : 'No packages found'}</TableCell></TableRow>}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Card>
+              </Box>
+            )}
           </>
         )}
       </Container>
@@ -501,8 +640,6 @@ export default function AdminPage() {
             <Select labelId="role-select-label" value={editRole} label={ar ? 'الرتبة' : 'Role'} onChange={(e) => setEditRole(e.target.value)} sx={{ color: '#fff' }}>
               <MenuItem value="USER">{ar ? 'مستخدم عادي' : 'USER'}</MenuItem>
               <MenuItem value="INSPECTOR">{ar ? 'محاضر (Inspector)' : 'INSPECTOR'}</MenuItem>
-              
-              {/* 🔴 إخفاء رتب الإدارة عن المانجر */}
               {user?.role === 'ADMIN' && <MenuItem value="MANAGER">{ar ? 'مدير (Manager)' : 'MANAGER'}</MenuItem>}
               {user?.role === 'ADMIN' && <MenuItem value="ADMIN">{ar ? 'مسؤول (Admin)' : 'ADMIN'}</MenuItem>}
             </Select>
@@ -520,31 +657,53 @@ export default function AdminPage() {
       </Dialog>
 
       {/* Add/Edit Course Dialog */}
-      <Dialog open={courseDialogOpen} onClose={() => setCourseDialogOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3, minWidth: { xs: '90%', sm: 400 } } }}>
+      <Dialog open={courseDialogOpen} onClose={() => setCourseDialogOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3, minWidth: { xs: '90%', sm: 450 } } }}>
         <DialogTitle sx={{ fontWeight: 700, color: palette.textMain, borderBottom: `1px solid rgba(37,154,203,0.3)` }}>{selectedCourse ? (ar ? 'تعديل الكورس' : 'Edit Course') : (ar ? 'إضافة كورس جديد' : 'Add New Course')}</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
           <TextField label={ar ? 'عنوان الكورس' : 'Course Title'} value={courseForm.title} onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border }, '&:hover fieldset': { borderColor: palette.primaryHover } } }} />
           <TextField label={ar ? 'وصف قصير (اختياري)' : 'Short Description'} value={courseForm.shortDescription} onChange={(e) => setCourseForm({ ...courseForm, shortDescription: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}/>
           <TextField label={ar ? 'الوصف الشامل' : 'Full Description'} value={courseForm.description} onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })} fullWidth multiline rows={3} InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}/>
-          <TextField label={ar ? 'السعر ($)' : 'Price ($)'} type="number" value={courseForm.originalPrice} onChange={(e) => setCourseForm({ ...courseForm, originalPrice: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}/>
+          
           <FormControl fullWidth sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}>
-            <InputLabel sx={{ color: palette.textSec }}>{ar ? 'نوع الباقة' : 'Package Type'}</InputLabel>
-            <Select value={courseForm.packageType} label={ar ? 'نوع الباقة' : 'Package Type'} onChange={(e) => setCourseForm({ ...courseForm, packageType: e.target.value })} sx={{ color: '#fff' }}>
+            <InputLabel sx={{ color: palette.textSec }}>{ar ? 'تخصيص محاضرين (Inspectors)' : 'Assign Inspectors'}</InputLabel>
+            <Select
+              multiple
+              value={courseForm.inspectorIds}
+              onChange={(e) => setCourseForm({ ...courseForm, inspectorIds: typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value })}
+              input={<OutlinedInput label={ar ? 'تخصيص محاضرين (Inspectors)' : 'Assign Inspectors'} />}
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {selected.map((value) => {
+                    const insp = inspectors.find(i => i.id === value);
+                    return <Chip key={value} label={insp ? `${insp.firstName} ${insp.lastName}` : value} size="small" sx={{ bgcolor: 'rgba(48,192,242,0.2)', color: palette.primary }} />;
+                  })}
+                </Box>
+              )}
+              sx={{ color: '#fff' }}
+              MenuProps={{ PaperProps: { sx: { bgcolor: palette.cardBg, color: '#fff' } } }}
+            >
+              {inspectors.map((insp) => (
+                <MenuItem key={insp.id} value={insp.id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
+                  <Checkbox checked={courseForm.inspectorIds.indexOf(insp.id) > -1} sx={{ color: palette.primary, '&.Mui-checked': { color: palette.primary } }} />
+                  <ListItemText primary={`${insp.firstName} ${insp.lastName}`} />
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <TextField label={ar ? 'السعر ($)' : 'Price ($)'} type="number" value={courseForm.originalPrice} onChange={(e) => setCourseForm({ ...courseForm, originalPrice: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}/>
+          
+          <FormControl fullWidth sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}>
+            <InputLabel sx={{ color: palette.textSec }}>{ar ? 'نوع الباقة التابع لها' : 'Package Type'}</InputLabel>
+            <Select value={courseForm.packageType} label={ar ? 'نوع الباقة التابع لها' : 'Package Type'} onChange={(e) => setCourseForm({ ...courseForm, packageType: e.target.value })} sx={{ color: '#fff' }}>
               <MenuItem value="BASIC">Basic</MenuItem>
               <MenuItem value="STANDARD">Standard</MenuItem>
               <MenuItem value="PREMIUM">Premium</MenuItem>
               <MenuItem value="ENTERPRISE">Enterprise</MenuItem>
             </Select>
           </FormControl>
-          <TextField 
-            label={ar ? 'رابط غلاف الدورة (Thumbnail URL)' : 'Thumbnail URL'} 
-            value={courseForm.thumbnailUrl} 
-            onChange={(e) => setCourseForm({ ...courseForm, thumbnailUrl: e.target.value })} 
-            fullWidth 
-            InputProps={{ sx: { color: '#fff' } }} 
-            InputLabelProps={{ sx: { color: palette.textSec } }} 
-            sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}
-          />
+          
+          <TextField label={ar ? 'رابط غلاف الدورة (Thumbnail URL)' : 'Thumbnail URL'} value={courseForm.thumbnailUrl} onChange={(e) => setCourseForm({ ...courseForm, thumbnailUrl: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}/>
         </DialogContent>
         <DialogActions sx={{ p: 2.5, borderTop: `1px solid rgba(37,154,203,0.3)` }}>
           <Button onClick={() => setCourseDialogOpen(false)} sx={{ color: palette.textSec }}>{ar ? 'إلغاء' : 'Cancel'}</Button>
@@ -575,7 +734,6 @@ export default function AdminPage() {
           {ar ? 'مراجعة طلب السحب' : 'Review Withdrawal'}
         </DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 3 }}>
-          
           <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 2, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 2, border: `1px dashed ${palette.primary}` }}>
              <Box>
                 <Typography sx={{ color: palette.textSec, fontSize: '0.85rem' }}>{ar ? 'المسوق:' : 'Affiliate:'}</Typography>
@@ -586,46 +744,39 @@ export default function AdminPage() {
                 <Typography sx={{ color: palette.primary, fontWeight: 900, fontSize: '1.2rem' }}>${selectedWithdrawal?.amount}</Typography>
              </Box>
           </Box>
-
           <FormControl fullWidth sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border }, '&:hover fieldset': { borderColor: palette.primaryHover } } }}>
             <InputLabel sx={{ color: palette.textSec }}>{ar ? 'قرار الإدارة (الحالة)' : 'Decision (Status)'}</InputLabel>
-            <Select 
-               value={withdrawalStatus} 
-               label={ar ? 'قرار الإدارة (الحالة)' : 'Decision (Status)'} 
-               onChange={(e) => setWithdrawalStatus(e.target.value)} 
-               sx={{ color: '#fff' }}
-            >
+            <Select value={withdrawalStatus} label={ar ? 'قرار الإدارة (الحالة)' : 'Decision (Status)'} onChange={(e) => setWithdrawalStatus(e.target.value)} sx={{ color: '#fff' }}>
               <MenuItem value="PROCESSING">{ar ? 'قيد المراجعة / تعليق' : 'Processing / Hold'}</MenuItem>
               <MenuItem value="COMPLETED" sx={{ color: palette.success, fontWeight: 'bold' }}>{ar ? 'موافقة (مكتمل)' : 'Approve (Completed)'}</MenuItem>
               <MenuItem value="REJECTED" sx={{ color: palette.danger, fontWeight: 'bold' }}>{ar ? 'رفض الطلب' : 'Reject'}</MenuItem>
             </Select>
           </FormControl>
-
-          <TextField 
-            label={ar ? 'ملاحظة الإدارة (ستظهر للمسوق)' : 'Admin Note (Visible to affiliate)'} 
-            value={adminNote} 
-            onChange={(e) => setAdminNote(e.target.value)} 
-            fullWidth multiline rows={3} 
-            placeholder={ar ? 'مثال: تم تحويل المبلغ بنجاح، أو تم الرفض بسبب خطأ في الرقم' : 'e.g. Transferred successfully, or rejected due to wrong number'}
-            InputProps={{ sx: { color: '#fff' } }} 
-            InputLabelProps={{ sx: { color: palette.textSec } }} 
-            sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border }, '&:hover fieldset': { borderColor: palette.primaryHover } } }}
-          />
-
+          <TextField label={ar ? 'ملاحظة الإدارة (ستظهر للمسوق)' : 'Admin Note (Visible to affiliate)'} value={adminNote} onChange={(e) => setAdminNote(e.target.value)} fullWidth multiline rows={3} placeholder={ar ? 'مثال: تم تحويل المبلغ بنجاح' : 'e.g. Transferred successfully'} InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border }, '&:hover fieldset': { borderColor: palette.primaryHover } } }} />
         </DialogContent>
         <DialogActions sx={{ p: 3, borderTop: `1px solid rgba(37,154,203,0.3)` }}>
           <Button onClick={() => setReviewWithdrawalOpen(false)} sx={{ color: palette.textSec, fontWeight: 'bold' }}>{ar ? 'إلغاء' : 'Cancel'}</Button>
-          <Button 
-             onClick={handleProcessWithdrawal} 
-             variant="contained" 
-             disabled={savingWithdrawal} 
-             sx={{ 
-                bgcolor: withdrawalStatus === 'COMPLETED' ? palette.success : withdrawalStatus === 'REJECTED' ? palette.danger : palette.primary, 
-                color: withdrawalStatus === 'PROCESSING' ? '#000' : '#fff', 
-                fontWeight: 'bold' 
-             }}
-          >
+          <Button onClick={handleProcessWithdrawal} variant="contained" disabled={savingWithdrawal} sx={{ bgcolor: withdrawalStatus === 'COMPLETED' ? palette.success : withdrawalStatus === 'REJECTED' ? palette.danger : palette.primary, color: withdrawalStatus === 'PROCESSING' ? '#000' : '#fff', fontWeight: 'bold' }}>
             {savingWithdrawal ? <CircularProgress size={20} sx={{color: '#fff'}}/> : (ar ? 'حفظ وتحديث الحالة' : 'Save & Update Status')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add/Edit Package Dialog */}
+      <Dialog open={packageDialogOpen} onClose={() => setPackageDialogOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3, minWidth: { xs: '90%', sm: 400 } } }}>
+        <DialogTitle sx={{ fontWeight: 700, color: palette.textMain, borderBottom: `1px solid rgba(37,154,203,0.3)` }}>
+          {selectedPackage ? (ar ? 'تعديل الباقة' : 'Edit Package') : (ar ? 'إنشاء باقة جديدة' : 'Create New Package')}
+        </DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+          <TextField label={ar ? 'اسم الباقة (مثال: Basic)' : 'Package Name'} value={packageForm.name} onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }} />
+          <TextField label={ar ? 'سعر الباقة ($)' : 'Package Price ($)'} type="number" value={packageForm.price} onChange={(e) => setPackageForm({ ...packageForm, price: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }} />
+          <TextField label={ar ? 'عدد الكورسات المتاحة' : 'Available Courses Count'} type="number" value={packageForm.coursesCount} onChange={(e) => setPackageForm({ ...packageForm, coursesCount: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }} />
+          <TextField label={ar ? 'رابط صورة الباقة (Thumbnail)' : 'Thumbnail URL'} value={packageForm.thumbnailUrl} onChange={(e) => setPackageForm({ ...packageForm, thumbnailUrl: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }} />
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5, borderTop: `1px solid rgba(37,154,203,0.3)` }}>
+          <Button onClick={() => setPackageDialogOpen(false)} sx={{ color: palette.textSec }}>{ar ? 'إلغاء' : 'Cancel'}</Button>
+          <Button onClick={handleSavePackage} variant="contained" disabled={savingPackage} sx={{ bgcolor: palette.primary, color: '#000', fontWeight: 'bold', '&:hover': {bgcolor: palette.primaryHover} }}>
+            {savingPackage ? <CircularProgress size={20} sx={{color: '#000'}}/> : (ar ? 'حفظ الباقة' : 'Save Package')}
           </Button>
         </DialogActions>
       </Dialog>

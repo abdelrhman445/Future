@@ -56,11 +56,14 @@ export default function AffiliatePage() {
     
   const totalEarnings = data?.stats?.totalEarnings || data?.user?.totalEarnings || 0;
   const pendingEarnings = data?.affiliate?.pendingEarnings || data?.user?.pendingEarnings || 0;
-  const totalSales = data?.stats?.totalSalesGenerated || 0; // مبيعات المسوق
-  const totalReferrals = data?.stats?.totalReferrals || 0;
+  
+  // 🔴 رجعنا الاعتماد الكلي على الباك إند بعد ما اتصلح من الجذور
+  const totalSales = data?.stats?.totalSalesGenerated || 0; 
+  
+  const totalReferrals = data?.stats?.totalReferrals || data?.referrals?.length || 0;
   const recentEarnings = data?.referrals || [];
   
-  // مصفوفة سجل السحوبات (بافتراض أن الباك إند يرسلها في داتا الداشبورد)
+  // مصفوفة سجل السحوبات
   const withdrawalsHistory = data?.withdrawals || []; 
 
   const copyLink = () => {
@@ -224,7 +227,7 @@ export default function AffiliatePage() {
             startIcon={<AccountBalanceWallet />}
             sx={{ 
               bgcolor: palette.primary, color: '#000', fontWeight: 800, px: 4, py: 1.5,
-              gap: 2, // 🔴 زيادة المسافة بين الأيقونة والنص
+              gap: 2, 
               '&:hover': { bgcolor: palette.primaryHover },
               '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' }
             }}
@@ -239,7 +242,7 @@ export default function AffiliatePage() {
             startIcon={<CoPresent />}
             sx={{ 
               borderColor: palette.primary, color: palette.primary, fontWeight: 800, px: 4, py: 1.5,
-              gap: 2, // 🔴 زيادة المسافة بين الأيقونة والنص
+              gap: 2, 
               '&:hover': { borderColor: palette.primaryHover, background: 'rgba(48,192,242,0.05)' }
             }}
           >

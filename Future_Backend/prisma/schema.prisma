@@ -101,6 +101,13 @@ model User {
 
   withdrawalRequests WithdrawalRequest[]
 
+  // ==========================================
+  // 🔴 إضافات نظام المفتشين (Inspectors) 🔴
+  // ==========================================
+  assignedCourses Course[]        @relation("CourseInspectors")
+  writtenNotes    InspectorNote[] @relation("InspectorNotes")
+  receivedNotes   InspectorNote[] @relation("StudentNotes")
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   lastLoginAt      DateTime?
@@ -189,6 +196,12 @@ model Course {
   sections          CourseSection[]
   purchases         UserCourse[]
   affiliateTracking AffiliateTracking[]
+
+  // ==========================================
+  // 🔴 إضافات نظام المفتشين (Inspectors) 🔴
+  // ==========================================
+  inspectors     User[]          @relation("CourseInspectors")
+  inspectorNotes InspectorNote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -382,4 +395,49 @@ model AuditLog {
   metadata String?
 
   createdAt DateTime @default(now())
+}
+
+//////////////////////////////////////////////////////
+// 🔴 جدول ملاحظات المفتشين (Inspector Notes) 🔴
+//////////////////////////////////////////////////////
+
+model InspectorNote {
+  id          String   @id @default(uuid())
+
+  inspectorId String
+  inspector   User     @relation("InspectorNotes", fields: [inspectorId], references: [id])
+
+  studentId   String
+  student     User     @relation("StudentNotes", fields: [studentId], references: [id])
+
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id])
+
+  note        String   @db.Text
+  
+  // حقل لتأكيد هل تم إرسال إيميل التنبيه للطالب أم لا
+  emailSent   Boolean  @default(false) 
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([inspectorId])
+  @@index([studentId])
+  @@index([courseId])
+}
+
+//////////////////////////////////////////////////////
+// 🔴 جدول إدارة الباقات (Packages) 🔴
+//////////////////////////////////////////////////////
+
+model Package {
+  id           String   @id @default(uuid())
+  
+  name         String
+  price        Float
+  thumbnailUrl String?
+  coursesCount Int      @default(0)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

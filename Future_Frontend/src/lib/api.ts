@@ -155,13 +155,21 @@ export const adminApi = {
   updateLesson: (lessonId: string, data: any) => 
     api.patch(`/courses/lessons/${lessonId}`, data),
 
-  // 🔴 التعديل هنا: إرسال JSON بدلاً من FormData وبدون هيدر الـ multipart
   uploadLessonVideo: (data: { lessonId: string; youtubeUrl: string }) =>
     api.post('/media/upload', data),
-  // ضيف دول جوه adminApi
+
   getWithdrawals: () => api.get('/affiliate/withdrawals'),
   processWithdrawal: (id: string, data: { status: string; adminNote?: string }) => 
     api.patch(`/affiliate/withdrawals/${id}`, data),
+
+  // إدارة الباقات
+  getPackages: () => api.get('/packages'),
+  createPackage: (data: { name: string; price: number; coursesCount: number; thumbnailUrl: string }) => api.post('/packages', data),
+  updatePackage: (id: string, data: any) => api.patch(`/packages/${id}`, data),
+
+  // 🔴 التعديل اللي كان ناقص لربط المحاضرين
+  getInspectors: () => api.get('/users/inspectors'),
+  assignCourseInspectors: (courseId: string, data: { inspectorIds: string[] }) => api.post(`/courses/${courseId}/assign-inspectors`, data),
 };
 
 // ==================== PRESENTATIONS ====================
@@ -183,4 +191,18 @@ export const managerApi = {
   // تفعيل كورس لمستخدم معين
   grantCourseAccess: (userId: string, courseId: string) => 
     api.post('/manager/grant-course', { userId, courseId }),
+  grantPackageAccess: (userId: string, packageId: string) => 
+    api.post('/manager/grant-package', { userId, packageId }),
+};
+
+// ==================== INSPECTOR ====================
+export const inspectorApi = {
+  getMyCourses: () => api.get('/inspector/my-courses'),
+  getCourseStudents: (courseId: string) => api.get(`/inspector/courses/${courseId}/students`),
+  addNote: (data: { studentId: string; courseId: string; note: string }) => api.post('/inspector/notes', data),
+  getStudentNotes: (courseId: string, studentId: string) => api.get(`/inspector/notes/${courseId}/${studentId}`),
+};
+// ==================== PACKAGE ====================
+export const packagesApi = {
+  list: () => api.get('/packages'),
 };

@@ -156,6 +156,25 @@ router.get('/', authenticate, requireManager, async (req: Request, res: Response
   } catch (err) { next(err); }
 });
 
+// ==========================================
+// ADMIN - جلب قائمة المفتشين فقط (لتعيينهم في الكورسات)
+// GET /api/users/inspectors
+// ==========================================
+router.get('/inspectors', authenticate, requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const inspectors = await prisma.user.findMany({
+      where: { role: 'INSPECTOR' },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+      }
+    });
+    sendSuccess(res, inspectors);
+  } catch (err) { next(err); }
+});
+
 // ==================== ADMIN - Toggle User Status ====================
 router.patch('/:userId/status', authenticate, requireManager, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -217,7 +236,7 @@ router.patch('/:userId/role', authenticate, requireManager, [
 router.post('/admin/refresh-affiliate-links', authenticate, requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const users = await prisma.user.findMany({
-      where: { affiliateCode: { not: undefined } }, // 🔴 التصحيح هنا: undefined بدل null
+      where: { affiliateCode: { not: undefined } }, // التصحيح هنا: undefined بدل null
       select: { id: true, affiliateCode: true },
     });
 
