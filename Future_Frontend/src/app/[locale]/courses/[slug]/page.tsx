@@ -52,14 +52,14 @@ export default function CourseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState(false);
 
-  // 🔴 حالات نافذة الدفع المتعدد
+  // 🔴 حالات نافذة الدفع المتعدد (تم جعل الافتراضي فودافون مؤقتاً)
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'vodafone' | 'instapay'>('stripe');
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'vodafone' | 'instapay'>('vodafone');
 
   // بيانات حسابات الدفع (تقدر تعدلها براحتك)
-  const VODAFONE_NUMBER = "01000000000";
-  const INSTAPAY_USER = "username@instapay";
-  const WHATSAPP_NUMBER = "+201000000000"; // رقم الواتساب بالصيغة الدولية بدون أصفار في البداية
+  const VODAFONE_NUMBER = "01021483238";
+  const INSTAPAY_USER = "01021483238";
+  const WHATSAPP_NUMBER = "+201155242795"; // رقم الواتساب بالصيغة الدولية بدون أصفار في البداية
 
   useEffect(() => {
     coursesApi.getBySlug(slug)
@@ -306,11 +306,12 @@ export default function CourseDetailPage() {
         <DialogContent sx={{ mt: 2 }}>
           <Grid container spacing={2} sx={{ mb: 4 }}>
             {[
-              { id: 'stripe', title: ar ? 'بطاقة بنكية' : 'Bank Card', icon: <CreditCardRounded fontSize="large" /> },
+              // 🔴 تم إيقاف سترايب مؤقتاً بالكومنت
+              // { id: 'stripe', title: ar ? 'بطاقة بنكية' : 'Bank Card', icon: <CreditCardRounded fontSize="large" /> },
               { id: 'vodafone', title: ar ? 'فودافون كاش' : 'Vodafone Cash', icon: <PhoneAndroidRounded fontSize="large" /> },
               { id: 'instapay', title: ar ? 'انستا باي' : 'InstaPay', icon: <AccountBalanceWalletRounded fontSize="large" /> },
             ].map((method) => (
-              <Grid item xs={4} key={method.id}>
+              <Grid item xs={6} key={method.id}>
                 <Box 
                   onClick={() => setPaymentMethod(method.id as any)}
                   sx={{ 
@@ -332,13 +333,14 @@ export default function CourseDetailPage() {
           <AnimatePresence mode="wait">
             <Box component={motion.div} key={paymentMethod} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               
-              {paymentMethod === 'stripe' && (
+              {/* 🔴 محتوى سترايب معموله كومنت */}
+              {/* paymentMethod === 'stripe' && (
                 <Box sx={{ textAlign: 'center', p: 3, background: 'rgba(0,0,0,0.2)', borderRadius: 4, border: `1px dashed ${alpha(palette.border, 0.3)}` }}>
                   <Typography sx={{ color: palette.textSec, fontSize: '1rem', lineHeight: 1.8, fontWeight: 600 }}>
                     {ar ? 'سيتم تحويلك إلى بوابة الدفع الآمنة لإتمام عملية الشراء بواسطة بطاقتك البنكية، وسيتم تفعيل الكورس تلقائياً.' : 'You will be redirected to the secure gateway to complete your purchase using your bank card, and the course will be activated automatically.'}
                   </Typography>
                 </Box>
-              )}
+              ) */}
 
               {(paymentMethod === 'vodafone' || paymentMethod === 'instapay') && (
                 <Box sx={{ background: 'rgba(0,0,0,0.3)', borderRadius: 4, p: 3, border: `1px solid ${alpha(palette.border, 0.3)}` }}>
@@ -372,12 +374,13 @@ export default function CourseDetailPage() {
 
         <DialogActions sx={{ p: 3, pt: 1, justifyContent: 'center' }}>
           {paymentMethod === 'stripe' ? (
-            <Button 
+            <>{/* 🔴 زرار سترايب معموله كومنت */}
+            {/* <Button 
               onClick={handleStripeCheckout} disabled={buying} variant="contained" fullWidth size="large"
               sx={{ background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, color: '#000', fontWeight: 900, py: 1.8, borderRadius: 3, fontSize: '1.1rem' }}
             >
               {buying ? (ar ? 'جاري التحويل...' : 'Redirecting...') : (ar ? 'متابعة الدفع الآمن' : 'Proceed to Secure Checkout')}
-            </Button>
+            </Button> */}</>
           ) : (
             /* 🔴 تم التعديل هنا لضبط مسافة أيقونة الواتساب */
             <Button 
