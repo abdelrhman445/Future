@@ -1,9 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: false, // 👈 السطر السحري اللي هيمنع تعارض React مع Plyr
   images: {
-    domains: [
-      'vz-62b0280e-2ba.b-cdn.net',
-      'via.placeholder.com',
+    // التحديث الجديد لـ Next.js 14 بدلاً من domains
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'vz-62b0280e-2ba.b-cdn.net',
+      },
+      {
+        protocol: 'https',
+        hostname: 'via.placeholder.com',
+      },
     ],
   },
   eslint: {
