@@ -1,12 +1,6 @@
-# ================================================================
-# Welcome to Future Academy
-# 🛑 Warning: Automated scanning is strictly prohibited.
-# ================================================================
-
 User-agent: *
 Allow: /
 
-# مسارات الإدارة الحقيقية (ممنوع الأرشفة)
 Disallow: /ar/admin/
 Disallow: /ar/manager/
 Disallow: /ar/inspector/
