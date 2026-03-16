@@ -70,31 +70,31 @@ enum WithdrawalStatus {
 //////////////////////////////////////////////////////
 
 model User {
-  id               String   @id @default(uuid())
-  email            String   @unique
-  passwordHash     String
-  firstName        String
-  lastName         String
-  phone            String?
-  role             Role     @default(USER)
+  id                String   @id @default(uuid())
+  email             String   @unique
+  passwordHash      String
+  firstName         String
+  lastName          String
+  phone             String?
+  role              Role     @default(USER)
 
-  isEmailVerified  Boolean  @default(false)
-  isActive         Boolean  @default(true)
+  isEmailVerified   Boolean  @default(false)
+  isActive          Boolean  @default(true)
 
-  avatarUrl        String?
+  avatarUrl         String?
 
-  affiliateCode    String   @unique
-  affiliateLink    String   @unique
+  affiliateCode     String   @unique
+  affiliateLink     String   @unique
 
-  totalEarnings    Float    @default(0)
-  pendingEarnings  Float    @default(0)
+  totalEarnings     Float    @default(0)
+  pendingEarnings   Float    @default(0)
 
-  otps              Otp[]
-  refreshTokens     RefreshToken[]
-  purchases         UserCourse[]
+  otps               Otp[]
+  refreshTokens      RefreshToken[]
+  purchases          UserCourse[]
 
-  referredBy        AffiliateTracking[] @relation("ReferredUser")
-  referrals         AffiliateTracking[] @relation("ReferrerUser")
+  referredBy         AffiliateTracking[] @relation("ReferredUser")
+  referrals          AffiliateTracking[] @relation("ReferrerUser")
 
   sentPresentations     PresentationInvite[] @relation("SentInvites")
   receivedPresentations PresentationInvite[] @relation("ReceivedInvites")
@@ -104,13 +104,13 @@ model User {
   // ==========================================
   // 🔴 إضافات نظام المفتشين (Inspectors) 🔴
   // ==========================================
-  assignedCourses Course[]        @relation("CourseInspectors")
+  assignedCourses Course[]         @relation("CourseInspectors")
   writtenNotes    InspectorNote[] @relation("InspectorNotes")
   receivedNotes   InspectorNote[] @relation("StudentNotes")
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  lastLoginAt      DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  lastLoginAt       DateTime?
 
   @@index([email])
   @@index([affiliateCode])
@@ -163,44 +163,44 @@ model Otp {
 //////////////////////////////////////////////////////
 
 model Course {
-  id               String       @id @default(uuid())
+  id                String       @id @default(uuid())
 
-  title            String
-  slug             String       @unique
+  title             String
+  slug              String       @unique
 
-  description      String
+  description       String
   shortDescription String?
 
-  thumbnailUrl     String?
-  previewVideoUrl  String?
+  thumbnailUrl      String?
+  previewVideoUrl   String?
 
-  status           CourseStatus @default(DRAFT)
+  status            CourseStatus @default(DRAFT)
 
-  packageType      PackageType  @default(BASIC)
+  packageType       PackageType  @default(BASIC)
 
-  originalPrice    Float
-  salePrice        Float?
+  originalPrice     Float
+  salePrice         Float?
 
-  currency         String       @default("USD")
+  currency          String       @default("USD")
 
-  commissionRate   Float        @default(15)
+  commissionRate    Float        @default(15)
 
-  duration         Int?
-  totalLessons     Int          @default(0)
+  duration          Int?
+  totalLessons      Int          @default(0)
 
-  language         String       @default("ar")
-  level            String       @default("beginner")
+  language          String       @default("ar")
+  level             String       @default("beginner")
 
-  tags             String?
+  tags              String?
 
   sections          CourseSection[]
-  purchases         UserCourse[]
+  purchases          UserCourse[]
   affiliateTracking AffiliateTracking[]
 
   // ==========================================
   // 🔴 إضافات نظام المفتشين (Inspectors) 🔴
   // ==========================================
-  inspectors     User[]          @relation("CourseInspectors")
+  inspectors     User[]           @relation("CourseInspectors")
   inspectorNotes InspectorNote[]
 
   createdAt DateTime @default(now())
@@ -265,10 +265,12 @@ model UserCourse {
   id       String   @id @default(uuid())
 
   userId   String
+  // 🔴 تم إضافة Cascade هنا عشان لو اليوزر اتمسح اشتراكاته تتمسح
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   courseId String
-  course   Course   @relation(fields: [courseId], references: [id])
+  // 🔴 تم إضافة Cascade هنا عشان لو الكورس اتمسح سجلات الشراء تتمسح
+  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   status   PurchaseStatus @default(PENDING)
 
@@ -284,10 +286,11 @@ model UserCourse {
   completedAt    DateTime?
 
   affiliateTrackingId String?
-  affiliateTracking   AffiliateTracking? @relation(fields: [affiliateTrackingId], references: [id])
+  // 🔴 تم إضافة Cascade هنا عشان تتبع العمولة
+  affiliateTracking   AffiliateTracking? @relation(fields: [affiliateTrackingId], references: [id], onDelete: Cascade)
 
   purchasedAt DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt    DateTime @updatedAt
 
   @@unique([userId, courseId])
 }
@@ -298,13 +301,16 @@ model AffiliateTracking {
   id String @id @default(uuid())
 
   referrerId String
-  referrer   User   @relation("ReferrerUser", fields: [referrerId], references: [id])
+  // 🔴 تم إضافة Cascade هنا (المسوق)
+  referrer   User   @relation("ReferrerUser", fields: [referrerId], references: [id], onDelete: Cascade)
 
   referredUserId String
-  referredUser   User   @relation("ReferredUser", fields: [referredUserId], references: [id])
+  // 🔴 تم إضافة Cascade هنا (الطالب المحال)
+  referredUser   User   @relation("ReferredUser", fields: [referredUserId], references: [id], onDelete: Cascade)
 
   courseId String?
-  course   Course? @relation(fields: [courseId], references: [id])
+  // 🔴 تم إضافة Cascade هنا (الكورس المرتبط)
+  course   Course? @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   commissionAmount Float  @default(0)
   commissionRate   Float  @default(0)
@@ -313,7 +319,7 @@ model AffiliateTracking {
 
   purchases UserCourse[]
 
-  referralIp     String?
+  referralIp      String?
   registrationIp String?
 
   createdAt DateTime @default(now())
@@ -328,14 +334,14 @@ model PresentationInvite {
   id String @id @default(uuid())
 
   senderId String
-  sender   User   @relation("SentInvites", fields: [senderId], references: [id])
+  // 🔴 تم إضافة Cascade هنا
+  sender   User   @relation("SentInvites", fields: [senderId], references: [id], onDelete: Cascade)
 
   // 🔴 Inspector ID
   inspectorId String
-  inspector   User   @relation("ReceivedInvites", fields: [inspectorId], references: [id])
+  // 🔴 تم إضافة Cascade هنا
+  inspector   User   @relation("ReceivedInvites", fields: [inspectorId], references: [id], onDelete: Cascade)
 
-  // 🔴 قائمة الأشخاص اللي هيحضروا (الـ Referrals)
-  // عشان Prisma تدعم مصفوفة Strings في PostgreSQL
   attendeeIds String[] 
 
   title   String
@@ -347,7 +353,7 @@ model PresentationInvite {
   status PresentationStatus @default(PENDING)
 
   responseMessage String?
-  respondedAt     DateTime?
+  respondedAt      DateTime?
 
   expiresAt DateTime?
 
@@ -361,12 +367,13 @@ model WithdrawalRequest {
   id String @id @default(uuid())
 
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  // 🔴 تم إضافة Cascade هنا
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   amount   Float
   currency String @default("USD")
 
-  method         String
+  method          String
   accountDetails String
 
   status WithdrawalStatus @default(PENDING)
@@ -385,8 +392,8 @@ model AuditLog {
 
   userId String?
 
-  action     String
-  resource   String
+  action      String
+  resource    String
   resourceId String?
 
   ipAddress String?
@@ -405,17 +412,19 @@ model InspectorNote {
   id          String   @id @default(uuid())
 
   inspectorId String
-  inspector   User     @relation("InspectorNotes", fields: [inspectorId], references: [id])
+  // 🔴 تم إضافة Cascade هنا
+  inspector   User     @relation("InspectorNotes", fields: [inspectorId], references: [id], onDelete: Cascade)
 
   studentId   String
-  student     User     @relation("StudentNotes", fields: [studentId], references: [id])
+  // 🔴 تم إضافة Cascade هنا
+  student     User     @relation("StudentNotes", fields: [studentId], references: [id], onDelete: Cascade)
 
   courseId    String
-  course      Course   @relation(fields: [courseId], references: [id])
+  // 🔴 تم إضافة Cascade هنا
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   note        String   @db.Text
   
-  // حقل لتأكيد هل تم إرسال إيميل التنبيه للطالب أم لا
   emailSent   Boolean  @default(false) 
 
   createdAt   DateTime @default(now())

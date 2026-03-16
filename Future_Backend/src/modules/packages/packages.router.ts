@@ -73,4 +73,29 @@ router.patch('/:id', authenticate, requireAdmin, [
   } catch (err) { next(err); }
 });
 
+// ==================== 🔴 ADMIN - DELETE PACKAGE (الجديد) ====================
+// مسار محمي للأدمن فقط لحذف باقة نهائياً
+// DELETE /api/packages/:id
+// ===========================================================================
+router.delete('/:id', authenticate, requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+
+    // التأكد من وجود الباقة أولاً
+    const existingPackage = await prisma.package.findUnique({ where: { id } });
+    if (!existingPackage) {
+      throw new AppError(404, 'الباقة غير موجودة');
+    }
+
+    // تنفيذ عملية الحذف
+    await prisma.package.delete({
+      where: { id }
+    });
+
+    sendSuccess(res, null, 'تم حذف الباقة بنجاح 🗑️');
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

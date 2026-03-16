@@ -128,6 +128,10 @@ export const adminApi = {
     api.patch(`/users/${userId}/role`, { role }),
   updateUserStatus: (userId: string, isActive: boolean) =>
     api.patch(`/users/${userId}/status`, { isActive }),
+
+  // 🔴 إضافة دالة حذف المستخدم هنا
+  deleteUser: (userId: string) =>
+    api.delete(`/users/${userId}`),
     
   createCourse: (data: object) => api.post('/courses', data),
   updateCourse: (courseId: string, data: object) =>
@@ -165,8 +169,12 @@ export const adminApi = {
   // إدارة الباقات
   getPackages: () => api.get('/packages'),
   createPackage: (data: { name: string; price: number; coursesCount: number; thumbnailUrl: string }) => api.post('/packages', data),
-  updatePackage: (id: string, data: any) => api.patch(`/packages/${id}`, data),
 
+  updatePackage: (id: string, data: any) => api.patch(`/packages/${id}`, data),
+// 🔴 إضافة دالة حذف الباقة هنا
+  deletePackage: (packageId: string) => 
+    api.delete(`/packages/${packageId}`),
+  
   // 🔴 التعديل اللي كان ناقص لربط المحاضرين
   getInspectors: () => api.get('/users/inspectors'),
   assignCourseInspectors: (courseId: string, data: { inspectorIds: string[] }) => api.post(`/courses/${courseId}/assign-inspectors`, data),

@@ -232,6 +232,33 @@ router.patch('/:userId/role', authenticate, requireManager, [
   } catch (err) { next(err); }
 });
 
+// ==================== 🔴 ADMIN - Delete User (الجديد) ====================
+// DELETE /api/users/:userId
+// ==========================================
+router.delete('/:userId', authenticate, requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId } = req.params;
+
+    // 1. منع الأدمن من حذف حسابه الشخصي
+    if (userId === req.user!.userId) {
+      throw new AppError(400, 'لا يمكنك حذف حسابك الشخصي من لوحة التحكم 🔒');
+    }
+
+    // 2. التأكد من وجود المستخدم
+    const targetUser = await prisma.user.findUnique({ where: { id: userId } });
+    if (!targetUser) throw new NotFoundError('المستخدم غير موجود');
+
+    // 3. تنفيذ الحذف النهائي
+    await prisma.user.delete({
+      where: { id: userId }
+    });
+
+    sendSuccess(res, null, 'تم حذف المستخدم وجميع بياناته المرتبطة بنجاح 🗑️');
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ==================== ADMIN - Refresh Affiliate Links ====================
 router.post('/admin/refresh-affiliate-links', authenticate, requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {

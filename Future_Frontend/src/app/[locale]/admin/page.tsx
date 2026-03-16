@@ -6,9 +6,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableRow, Chip,
   IconButton, CircularProgress, Dialog, DialogTitle, DialogContent,
   DialogActions, FormControl, InputLabel, Select, MenuItem, Switch, 
-  FormControlLabel, TableContainer, TextField, Tooltip, Checkbox, ListItemText, OutlinedInput
+  FormControlLabel, TableContainer, TextField, Tooltip, Checkbox, ListItemText, OutlinedInput, alpha
 } from '@mui/material';
-import { Edit, Delete, Add, Refresh, FactCheck, Security, InventoryRounded } from '@mui/icons-material';
+import { Edit, Delete, Add, Refresh, FactCheck, Security, InventoryRounded, SchoolRounded, LocalOfferRounded } from '@mui/icons-material';
 import Navbar from '@/components/layout/Navbar';
 import { adminApi, coursesApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
@@ -45,6 +45,11 @@ export default function AdminPage() {
   const [inspectors, setInspectors] = useState<any[]>([]); 
   const [packages, setPackages] = useState<any[]>([]); 
   const [loading, setLoading] = useState(true);
+
+  // ---------- 🔴 Delete States (الجديد) ----------
+  const [deleteUserDialogOpen, setDeleteUserDialogOpen] = useState(false);
+  const [deletePackageDialogOpen, setDeletePackageDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // ---------- User Edit State ----------
   const [editUserOpen, setEditUserOpen] = useState(false);
@@ -143,6 +148,31 @@ export default function AdminPage() {
   };
 
   // ============================== HANDLERS ==============================
+
+  // --- 🔴 User Deletion Logic (الجديد) ---
+  const handleOpenDeleteUser = (u: any) => {
+    if (u.role === 'ADMIN') {
+      toast.error(ar ? 'لا يمكن حذف حساب المسؤول الرئيسي' : 'Cannot delete Super Admin');
+      return;
+    }
+    setSelectedUser(u);
+    setDeleteUserDialogOpen(true);
+  };
+
+  const handleConfirmDeleteUser = async () => {
+    if (!selectedUser) return;
+    setIsDeleting(true);
+    try {
+      await adminApi.deleteUser(selectedUser.id);
+      toast.success(ar ? 'تم حذف المستخدم واشتراكاته نهائياً' : 'User deleted permanently');
+      setDeleteUserDialogOpen(false);
+      fetchAll();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || (ar ? 'فشل حذف المستخدم' : 'Failed to delete user'));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleOpenEditUser = (u: any) => {
     if (user?.role === 'MANAGER' && u.role === 'ADMIN') {
@@ -309,6 +339,27 @@ export default function AdminPage() {
     setPackageDialogOpen(true);
   };
 
+  // --- 🔴 Package Deletion Logic (الجديد) ---
+  const handleOpenDeletePackage = (pkg: any) => {
+    setSelectedPackage(pkg);
+    setDeletePackageDialogOpen(true);
+  };
+
+  const handleConfirmDeletePackage = async () => {
+    if (!selectedPackage) return;
+    setIsDeleting(true);
+    try {
+      await (adminApi as any).deletePackage(selectedPackage.id);
+      toast.success(ar ? 'تم حذف الباقة بنجاح' : 'Package deleted successfully');
+      setDeletePackageDialogOpen(false);
+      fetchAll();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || (ar ? 'فشل حذف الباقة' : 'Failed to delete package'));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleSavePackage = async () => {
     if (!packageForm.name || !packageForm.price) {
       toast.error(ar ? 'يرجى إدخال اسم وسعر الباقة' : 'Name and price are required');
@@ -404,9 +455,14 @@ export default function AdminPage() {
                           <TableCell sx={{ color: palette.textSec }}>{dayjs(u.createdAt).format('DD/MM/YYYY')}</TableCell>
                           <TableCell align="center">
                             {!(user?.role === 'MANAGER' && u.role === 'ADMIN') ? (
-                              <IconButton onClick={() => handleOpenEditUser(u)} sx={{ color: palette.primary, '&:hover': { background: 'rgba(48,192,242,0.1)' } }}>
-                                <Edit />
-                              </IconButton>
+                              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                                <IconButton onClick={() => handleOpenEditUser(u)} sx={{ color: palette.primary, '&:hover': { background: 'rgba(48,192,242,0.1)' } }}>
+                                  <Edit />
+                                </IconButton>
+                                <IconButton onClick={() => handleOpenDeleteUser(u)} sx={{ color: palette.danger, '&:hover': { background: 'rgba(230,47,118,0.1)' } }}>
+                                  <Delete />
+                                </IconButton>
+                              </Box>
                             ) : (
                                <Tooltip title={ar ? "إدارة عليا (محمي)" : "Super Admin (Protected)"}>
                                   <Security sx={{ color: palette.locked, opacity: 0.5 }} />
@@ -442,7 +498,6 @@ export default function AdminPage() {
                           <TableCell>{ar ? 'الكورس' : 'Course'}</TableCell>
                           <TableCell>{ar ? 'الباقة' : 'Package'}</TableCell>
                           <TableCell>{ar ? 'السعر' : 'Price'}</TableCell>
-                          {/* 🔴 تم إضافة align="center" لسنترة رأس العمود */}
                           <TableCell align="center">{ar ? 'المحاضر' : 'Inspector'}</TableCell>
                           <TableCell>{ar ? 'الحالة' : 'Status'}</TableCell>
                           <TableCell align="center">{ar ? 'إجراءات' : 'Actions'}</TableCell>
@@ -454,8 +509,6 @@ export default function AdminPage() {
                             <TableCell sx={{ color: '#fff', fontWeight: 600 }}>{c.title}</TableCell>
                             <TableCell sx={{ color: palette.textSec }}>{c.packageType}</TableCell>
                             <TableCell sx={{ color: palette.success, fontWeight: 'bold' }}>${c.originalPrice || 0}</TableCell>
-                            
-                            {/* 🔴 تم إضافة align="center" للخلية و justifyContent: 'center' للـ Box للسنترة التامة */}
                             <TableCell align="center">
                               {c.inspectors && c.inspectors.length > 0 ? (
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, justifyContent: 'center' }}>
@@ -474,7 +527,6 @@ export default function AdminPage() {
                                 </Typography>
                               )}
                             </TableCell>
-
                             <TableCell>
                               <Chip label={c.status} size="small" sx={{ 
                                 background: c.status === "PUBLISHED" ? 'rgba(34,197,94,0.2)' : c.status === "DRAFT" ? 'rgba(161,161,170,0.2)' : c.status === "HIDDEN" ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)', 
@@ -613,7 +665,14 @@ export default function AdminPage() {
                             <TableCell sx={{ color: palette.textSec }}>{pkg.coursesCount}</TableCell>
                             <TableCell sx={{ color: palette.success, fontWeight: 'bold' }}>${pkg.price}</TableCell>
                             <TableCell align="center">
-                              <IconButton onClick={() => handleOpenEditPackage(pkg)} sx={{ color: palette.primary, '&:hover': { background: 'rgba(48,192,242,0.1)' } }}><Edit /></IconButton>
+                              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                                <IconButton onClick={() => handleOpenEditPackage(pkg)} sx={{ color: palette.primary, '&:hover': { background: 'rgba(48,192,242,0.1)' } }}>
+                                  <Edit />
+                                </IconButton>
+                                <IconButton onClick={() => handleOpenDeletePackage(pkg)} sx={{ color: palette.danger, '&:hover': { background: 'rgba(230,47,118,0.1)' } }}>
+                                  <Delete />
+                                </IconButton>
+                              </Box>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -629,6 +688,39 @@ export default function AdminPage() {
       </Container>
 
       {/* ============================== DIALOGS ============================== */}
+
+      {/* 🔴 Confirm Delete User Dialog (الجديد) */}
+      <Dialog open={deleteUserDialogOpen} onClose={() => setDeleteUserDialogOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `2px solid ${palette.danger}`, borderRadius: 4, minWidth: 350 } }}>
+        <DialogTitle sx={{ color: palette.danger, fontWeight: 900 }}>{ar ? '⚠️ حذف مستخدم نهائياً؟' : '⚠️ Delete User Permanently?'}</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: '#fff', mb: 2 }}>{ar ? 'هل أنت متأكد؟ سيتم حذف جميع بيانات المستخدم واشتراكاته من النظام ولا يمكن التراجع عن هذا الإجراء.' : 'Are you sure? This action will wipe all user data and enrollments. This cannot be undone.'}</Typography>
+          <Box sx={{ p: 2, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 2, border: `1px dashed ${palette.danger}` }}>
+            <Typography sx={{ color: '#fff', fontWeight: 800 }}>{selectedUser?.firstName} {selectedUser?.lastName}</Typography>
+            <Typography sx={{ color: palette.textSec, fontSize: '0.85rem' }}>{selectedUser?.email}</Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setDeleteUserDialogOpen(false)} sx={{ color: palette.textSec }}>{ar ? 'تراجع' : 'Cancel'}</Button>
+          <Button onClick={handleConfirmDeleteUser} disabled={isDeleting} variant="contained" sx={{ bgcolor: palette.danger, fontWeight: 900, '&:hover': { bgcolor: '#be123c' } }}>
+            {isDeleting ? <CircularProgress size={20} color="inherit" /> : (ar ? 'نعم، احذف نهائياً' : 'Yes, Delete Permanently')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 🔴 Confirm Delete Package Dialog (الجديد) */}
+      <Dialog open={deletePackageDialogOpen} onClose={() => setDeletePackageDialogOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `2px solid ${palette.danger}`, borderRadius: 4, minWidth: 350 } }}>
+        <DialogTitle sx={{ color: palette.danger, fontWeight: 900 }}>{ar ? '🗑️ حذف الباقة التعليمية؟' : '🗑️ Delete Educational Package?'}</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: '#fff', mb: 2 }}>{ar ? 'سيتم حذف الباقة من المتجر. لن يتمكن الطلاب الجدد من شرائها، ولكن الطلاب المشتركين مسبقاً لن يتأثروا.' : 'This will remove the package from the store. New students won\'t be able to buy it.'}</Typography>
+          <Typography sx={{ color: palette.primary, fontWeight: 800, textAlign: 'center' }}>{selectedPackage?.name}</Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setDeletePackageDialogOpen(false)} sx={{ color: palette.textSec }}>{ar ? 'تراجع' : 'Cancel'}</Button>
+          <Button onClick={handleConfirmDeletePackage} disabled={isDeleting} variant="contained" sx={{ bgcolor: palette.danger, fontWeight: 900 }}>
+            {isDeleting ? <CircularProgress size={20} color="inherit" /> : (ar ? 'حذف الباقة' : 'Delete Package')}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Edit User Dialog */}
       <Dialog open={editUserOpen} onClose={() => setEditUserOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3, minWidth: { xs: '90%', sm: 400 } } }}>

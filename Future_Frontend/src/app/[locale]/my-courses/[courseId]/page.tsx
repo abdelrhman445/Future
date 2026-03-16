@@ -199,13 +199,15 @@ export default function CoursePlayerPage() {
       onDragStart={(e) => e.preventDefault()} 
     >
       <Navbar />
-      <Container maxWidth="xl" sx={{ py: { xs: 4, md: 5 } }}>
-        <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Box sx={{ p: 1.5, borderRadius: 3, background: alpha(palette.primary, 0.1), border: `1px solid ${alpha(palette.primary, 0.3)}` }}>
-            <MenuBookRounded sx={{ color: palette.primary, fontSize: 28 }} />
+      <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 4, md: 5 }, px: { xs: 1.5, sm: 2, md: 3 } }}>
+        <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 2 } }}>
+          <Box sx={{ p: { xs: 1, md: 1.5 }, borderRadius: 3, background: alpha(palette.primary, 0.1), border: `1px solid ${alpha(palette.primary, 0.3)}` }}>
+            <MenuBookRounded sx={{ color: palette.primary, fontSize: { xs: 24, md: 28 } }} />
           </Box>
           <Box>
-            <Typography variant="h4" sx={{ fontWeight: 900, color: '#fff', letterSpacing: '-0.5px' }}>{course?.title}</Typography>
+            <Typography variant="h4" sx={{ fontWeight: 900, color: '#fff', letterSpacing: '-0.5px', fontSize: { xs: '1.25rem', sm: '1.75rem', md: '2.125rem' } }}>
+              {course?.title}
+            </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
               <ShieldRounded sx={{ color: palette.primary, fontSize: 16 }} />
               <Typography sx={{ color: palette.textSec, fontSize: '0.85rem', fontWeight: 600 }}>Protected Environment</Typography>
@@ -213,13 +215,14 @@ export default function CoursePlayerPage() {
           </Box>
         </Box>
 
-        <Grid container spacing={4}>
-          <Grid item xs={12} md={8}>
+        <Grid container spacing={{ xs: 2, md: 4 }}>
+          {/* ================= VIDEO AREA ================= */}
+          <Grid item xs={12} lg={8}>
             <Card
               component={motion.div} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
               sx={{
                 background: `linear-gradient(180deg, rgba(8, 69, 112, 0.4) 0%, rgba(10, 10, 15, 0.8) 100%)`,
-                backdropFilter: 'blur(20px)', border: `1px solid rgba(37,154,203,0.3)`, borderRadius: 5, overflow: 'hidden', boxShadow: `0 20px 50px rgba(0,0,0,0.5)`
+                backdropFilter: 'blur(20px)', border: `1px solid rgba(37,154,203,0.3)`, borderRadius: { xs: 3, md: 5 }, overflow: 'hidden', boxShadow: `0 20px 50px rgba(0,0,0,0.5)`
               }}
             >
               {/* 🛡️ حاوية الفيديو الرئيسية */}
@@ -269,7 +272,7 @@ export default function CoursePlayerPage() {
                     <Box
                       sx={{
                         position: 'absolute', top: watermarkPos.top, left: watermarkPos.left,
-                        color: 'rgba(255, 255, 255, 0.25)', fontSize: 'clamp(12px, 1.5vw, 18px)', fontWeight: 900,
+                        color: 'rgba(255, 255, 255, 0.25)', fontSize: 'clamp(10px, 1.2vw, 16px)', fontWeight: 900,
                         pointerEvents: 'none', transition: 'top 1s ease-in-out, left 1s ease-in-out',
                         textShadow: '1px 1px 2px rgba(0,0,0,0.8)', zIndex: 20, backgroundColor: 'rgba(0,0,0,0.2)',
                         padding: '4px 12px', borderRadius: 2, backdropFilter: 'blur(2px)'
@@ -285,10 +288,10 @@ export default function CoursePlayerPage() {
                       sx={{
                         position: 'absolute', bottom: 0, left: 0, right: 0,
                         background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%)',
-                        padding: '20px 20px 10px', zIndex: 50,
+                        padding: { xs: '10px 15px 5px', md: '20px 20px 10px' }, zIndex: 50,
                         opacity: isHovering || !playing || seeking ? 1 : 0, 
                         transition: 'opacity 0.3s ease-in-out',
-                        display: 'flex', flexDirection: 'column', gap: 1
+                        display: 'flex', flexDirection: 'column', gap: { xs: 0.5, md: 1 }
                       }}
                     >
                       {/* شريط التقديم والتأخير */}
@@ -297,19 +300,19 @@ export default function CoursePlayerPage() {
                         onChange={handleSeekChange}
                         onChangeCommitted={handleSeekMouseUp}
                         sx={{
-                          color: palette.primary, height: 4, padding: 0,
+                          color: palette.primary, height: 4, padding: '10px 0',
                           '& .MuiSlider-thumb': { width: 12, height: 12, transition: '0.2s', '&:hover, &.Mui-focusVisible': { boxShadow: `0px 0px 0px 8px ${alpha(palette.primary, 0.16)}` } },
                           '& .MuiSlider-rail': { opacity: 0.3, backgroundColor: '#fff' }
                         }}
                       />
                       
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <IconButton onClick={handlePlayPause} sx={{ color: '#fff', '&:hover': { color: palette.primary } }}>
-                            {playing ? <PauseRounded fontSize="large" /> : <PlayArrowRounded fontSize="large" />}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 } }}>
+                          <IconButton onClick={handlePlayPause} sx={{ color: '#fff', p: { xs: 0.5, md: 1 }, '&:hover': { color: palette.primary } }}>
+                            {playing ? <PauseRounded sx={{ fontSize: { xs: 28, md: 32 } }} /> : <PlayArrowRounded sx={{ fontSize: { xs: 28, md: 32 } }} />}
                           </IconButton>
                           
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: 100 }}>
+                          <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1, width: { sm: 80, md: 100 } }}>
                             <IconButton onClick={handleToggleMute} sx={{ color: '#fff', p: 0.5, '&:hover': { color: palette.primary } }}>
                               {muted || volume === 0 ? <VolumeOffRounded /> : <VolumeUpRounded />}
                             </IconButton>
@@ -320,7 +323,7 @@ export default function CoursePlayerPage() {
                             />
                           </Box>
 
-                          <Typography sx={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, ml: 2, fontFamily: 'monospace' }}>
+                          <Typography sx={{ color: '#fff', fontSize: { xs: '0.7rem', md: '0.85rem' }, fontWeight: 600, ml: { xs: 0.5, md: 2 }, fontFamily: 'monospace' }}>
                             {formatTime(played * duration)} / {formatTime(duration)}
                           </Typography>
                         </Box>
@@ -340,25 +343,31 @@ export default function CoursePlayerPage() {
                 )}
               </Box>
 
-              <Box sx={{ p: { xs: 3, md: 4 } }}>
+              <Box sx={{ p: { xs: 2.5, md: 4 } }}>
                 <Chip label="الدرس الحالي" size="small" sx={{ mb: 2, background: alpha(palette.primary, 0.15), color: palette.primary, fontWeight: 800, border: `1px solid ${alpha(palette.primary, 0.3)}` }} />
-                <Typography variant="h5" sx={{ fontWeight: 900, mb: 1.5, color: '#fff' }}>{activeLesson?.title || "اختر درساً للبدء"}</Typography>
-                <Typography sx={{ color: palette.textSec, lineHeight: 1.8 }}>{activeLesson?.description || "لا يوجد وصف لهذا الدرس."}</Typography>
+                <Typography variant="h5" sx={{ fontWeight: 900, mb: 1.5, color: '#fff', fontSize: { xs: '1.25rem', md: '1.5rem' } }}>{activeLesson?.title || "اختر درساً للبدء"}</Typography>
+                <Typography sx={{ color: palette.textSec, lineHeight: 1.8, fontSize: { xs: '0.9rem', md: '1rem' } }}>{activeLesson?.description || "لا يوجد وصف لهذا الدرس."}</Typography>
               </Box>
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          {/* ================= COURSE CONTENT (Side Playlist) ================= */}
+          <Grid item xs={12} lg={4}>
             <Card
               component={motion.div} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
-              sx={{ background: `linear-gradient(180deg, rgba(8, 69, 112, 0.3) 0%, rgba(10, 10, 15, 0.9) 100%)`, backdropFilter: 'blur(15px)', border: `1px solid rgba(37,154,203,0.3)`, borderRadius: 5, height: { xs: 'auto', md: '80vh' }, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+              sx={{ 
+                background: `linear-gradient(180deg, rgba(8, 69, 112, 0.3) 0%, rgba(10, 10, 15, 0.9) 100%)`, 
+                backdropFilter: 'blur(15px)', border: `1px solid rgba(37,154,203,0.3)`, borderRadius: { xs: 3, md: 5 }, 
+                height: { xs: 'auto', lg: '80vh' }, 
+                display: 'flex', flexDirection: 'column', overflow: 'hidden' 
+              }}
             >
               <Box sx={{ p: 3, borderBottom: `1px solid rgba(37,154,203,0.2)`, background: 'rgba(255,255,255,0.02)' }}>
                 <Typography sx={{ fontWeight: 900, fontSize: '1.2rem', color: '#fff', display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <MenuBookRounded sx={{ color: palette.primary }} /> محتوى الكورس
                 </Typography>
               </Box>
-              <Box sx={{ flexGrow: 1, overflowY: 'auto', '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-track': { background: 'transparent' }, '&::-webkit-scrollbar-thumb': { background: 'rgba(37,154,203,0.3)', borderRadius: '10px' }, '&::-webkit-scrollbar-thumb:hover': { background: palette.primary } }}>
+              <Box sx={{ flexGrow: 1, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-track': { background: 'transparent' }, '&::-webkit-scrollbar-thumb': { background: 'rgba(37,154,203,0.3)', borderRadius: '10px' }, '&::-webkit-scrollbar-thumb:hover': { background: palette.primary } }}>
                 {sections.map((section: any, sIndex: number) => (
                   <Box key={section.id}>
                     <Box sx={{ px: 3, py: 2, background: 'rgba(0,0,0,0.3)', borderBottom: `1px solid rgba(255,255,255,0.02)` }}>
@@ -369,13 +378,20 @@ export default function CoursePlayerPage() {
                         const isSelected = activeLesson?.id === lesson.id;
                         const isCompleted = completedLessons.includes(lesson.id);
                         return (
-                          <ListItemButton key={lesson.id} onClick={() => selectLesson(lesson)} selected={isSelected} sx={{ py: 2, px: 3, borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'all 0.3s', '&.Mui-selected': { background: `linear-gradient(90deg, ${alpha(palette.primary, 0.15)} 0%, transparent 100%)`, borderLeft: `4px solid ${palette.primary}` }, '&:hover': { background: 'rgba(255,255,255,0.05)' } }}>
+                          <ListItemButton 
+                            key={lesson.id} onClick={() => selectLesson(lesson)} selected={isSelected} 
+                            sx={{ 
+                              py: { xs: 1.5, md: 2 }, px: 3, borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'all 0.3s', 
+                              '&.Mui-selected': { background: `linear-gradient(90deg, ${alpha(palette.primary, 0.15)} 0%, transparent 100%)`, borderLeft: `4px solid ${palette.primary}` }, 
+                              '&:hover': { background: 'rgba(255,255,255,0.05)' } 
+                            }}
+                          >
                             <Tooltip title={isCompleted ? "مكتمل" : "تحديد كمكتمل"} placement="top">
                               <IconButton onClick={(e) => toggleLessonCompletion(e, lesson.id)} sx={{ p: 0.5, mr: 2, color: isCompleted ? palette.success : 'rgba(255,255,255,0.2)', transition: '0.3s', '&:hover': { color: isCompleted ? palette.success : palette.primary } }}>
-                                {isCompleted ? <CheckCircleRounded /> : <RadioButtonUncheckedRounded />}
+                                {isCompleted ? <CheckCircleRounded fontSize="small" /> : <RadioButtonUncheckedRounded fontSize="small" />}
                               </IconButton>
                             </Tooltip>
-                            <ListItemText primary={`${lIndex + 1}. ${lesson.title}`} primaryTypographyProps={{ fontSize: '0.95rem', fontWeight: isSelected ? 800 : 600, color: isSelected ? '#fff' : palette.textSec, sx: { transition: 'color 0.3s' } }} />
+                            <ListItemText primary={`${lIndex + 1}. ${lesson.title}`} primaryTypographyProps={{ fontSize: { xs: '0.85rem', md: '0.95rem' }, fontWeight: isSelected ? 800 : 600, color: isSelected ? '#fff' : palette.textSec, sx: { transition: 'color 0.3s' } }} />
                             {isSelected && (
                               <motion.div initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }}>
                                 <PlayCircleOutlineRounded sx={{ color: palette.primary, fontSize: 20 }} />
