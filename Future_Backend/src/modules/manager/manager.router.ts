@@ -191,17 +191,27 @@ router.post('/grant-package', authenticate, requireManager, async (req: Request,
     let packageTypeEnum: any = null;
     const nameStr = pkg.name.toLowerCase();
 
-    if (nameStr.includes('basic') || nameStr.includes('بيزك')) packageTypeEnum = 'BASIC';
-    else if (nameStr.includes('standard') || nameStr.includes('ستاندر')) packageTypeEnum = 'STANDARD';
-    else if (nameStr.includes('premium') || nameStr.includes('بريميوم') || nameStr.includes('بريميم')) packageTypeEnum = 'PREMIUM';
-    else if (nameStr.includes('enterprise') || nameStr.includes('انتربرايز')) packageTypeEnum = 'ENTERPRISE';
-    else {
-        const exactMatch = ['BASIC', 'STANDARD', 'PREMIUM', 'ENTERPRISE'].find(e => e === pkg.name.toUpperCase());
+    // 🔴 التعديل هنا: إضافة دعم اختيار ALL لفتح كل الكورسات
+    if (nameStr.includes('all') || nameStr.includes('الكل')) {
+      packageTypeEnum = 'ALL';
+    } else if (nameStr.includes('basic') || nameStr.includes('بيزك')) {
+      packageTypeEnum = 'BASIC';
+    } else if (nameStr.includes('standard') || nameStr.includes('ستاندر')) {
+      packageTypeEnum = 'STANDARD';
+    } else if (nameStr.includes('premium') || nameStr.includes('بريميوم') || nameStr.includes('بريميم')) {
+      packageTypeEnum = 'PREMIUM';
+    } else if (nameStr.includes('enterprise') || nameStr.includes('انتربرايز')) {
+      packageTypeEnum = 'ENTERPRISE';
+    } else {
+        const exactMatch = ['ALL', 'BASIC', 'STANDARD', 'PREMIUM', 'ENTERPRISE'].find(e => e === pkg.name.toUpperCase());
         if (exactMatch) packageTypeEnum = exactMatch;
-        else throw new AppError(400, 'اسم الباقة يجب أن يحتوي على (Basic, Standard, Premium, Enterprise) أو ما يقابلها بالعربي.');
+        else throw new AppError(400, 'اسم الباقة يجب أن يحتوي على (All, Basic, Standard, Premium, Enterprise) أو ما يقابلها بالعربي.');
     }
 
-    const courses = await prisma.course.findMany({ where: { packageType: packageTypeEnum } });
+    // 🔴 التعديل هنا: لو النوع ALL بنجيب كل الكورسات، غير كدة بنفلتر بالنوع
+    const courses = await prisma.course.findMany({ 
+      where: packageTypeEnum === 'ALL' ? {} : { packageType: packageTypeEnum } 
+    });
 
     if (courses.length === 0) throw new AppError(400, 'لا توجد كورسات مرتبطة بهذه الباقة حالياً ⚠️');
 

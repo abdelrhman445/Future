@@ -149,7 +149,7 @@ export default function AdminPage() {
 
   // ============================== HANDLERS ==============================
 
-  // --- 🔴 User Deletion Logic (الجديد) ---
+  // --- 🔴 User Deletion Logic ---
   const handleOpenDeleteUser = (u: any) => {
     if (u.role === 'ADMIN') {
       toast.error(ar ? 'لا يمكن حذف حساب المسؤول الرئيسي' : 'Cannot delete Super Admin');
@@ -339,7 +339,7 @@ export default function AdminPage() {
     setPackageDialogOpen(true);
   };
 
-  // --- 🔴 Package Deletion Logic (الجديد) ---
+  // --- 🔴 Package Deletion Logic ---
   const handleOpenDeletePackage = (pkg: any) => {
     setSelectedPackage(pkg);
     setDeletePackageDialogOpen(true);
@@ -362,7 +362,7 @@ export default function AdminPage() {
 
   const handleSavePackage = async () => {
     if (!packageForm.name || !packageForm.price) {
-      toast.error(ar ? 'يرجى إدخال اسم وسعر الباقة' : 'Name and price are required');
+      toast.error(ar ? 'يرجى اختيار نوع وسعر الباقة' : 'Name and price are required');
       return;
     }
     setSavingPackage(true);
@@ -471,7 +471,6 @@ export default function AdminPage() {
                           </TableCell>
                         </TableRow>
                       ))}
-                      {users.length === 0 && <TableRow><TableCell colSpan={6} align="center" sx={{ py: 3, color: palette.textSec }}>{ar ? 'لا يوجد مستخدمين' : 'No users'}</TableCell></TableRow>}
                     </TableBody>
                   </Table>
                 </TableContainer>
@@ -544,7 +543,6 @@ export default function AdminPage() {
                             </TableCell>
                           </TableRow>
                         ))}
-                        {courses.length === 0 && <TableRow><TableCell colSpan={6} align="center" sx={{ py: 3, color: palette.textSec }}>{ar ? 'لا توجد كورسات' : 'No courses'}</TableCell></TableRow>}
                       </TableBody>
                     </Table>
                   </TableContainer>
@@ -574,7 +572,6 @@ export default function AdminPage() {
                           <TableCell sx={{ color: palette.textSec }}>{dayjs(tx.createdAt).format('DD/MM/YYYY')}</TableCell>
                         </TableRow>
                       ))}
-                      {transactions.length === 0 && <TableRow><TableCell colSpan={4} align="center" sx={{ py: 3, color: palette.textSec }}>{ar ? 'لا توجد معاملات' : 'No transactions'}</TableCell></TableRow>}
                     </TableBody>
                   </Table>
                 </TableContainer>
@@ -628,7 +625,6 @@ export default function AdminPage() {
                           </TableCell>
                         </TableRow>
                       ))}
-                      {withdrawals.length === 0 && <TableRow><TableCell colSpan={7} align="center" sx={{ py: 3, color: palette.textSec }}>{ar ? 'لا توجد طلبات سحب' : 'No withdrawal requests'}</TableCell></TableRow>}
                     </TableBody>
                   </Table>
                 </TableContainer>
@@ -676,7 +672,6 @@ export default function AdminPage() {
                             </TableCell>
                           </TableRow>
                         ))}
-                        {packages.length === 0 && <TableRow><TableCell colSpan={5} align="center" sx={{ py: 3, color: palette.textSec }}>{ar ? 'لا توجد باقات حالياً (أضف باقات من الزر أعلاه)' : 'No packages found'}</TableCell></TableRow>}
                       </TableBody>
                     </Table>
                   </TableContainer>
@@ -689,11 +684,11 @@ export default function AdminPage() {
 
       {/* ============================== DIALOGS ============================== */}
 
-      {/* 🔴 Confirm Delete User Dialog (الجديد) */}
+      {/* 🔴 Confirm Delete User Dialog */}
       <Dialog open={deleteUserDialogOpen} onClose={() => setDeleteUserDialogOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `2px solid ${palette.danger}`, borderRadius: 4, minWidth: 350 } }}>
         <DialogTitle sx={{ color: palette.danger, fontWeight: 900 }}>{ar ? '⚠️ حذف مستخدم نهائياً؟' : '⚠️ Delete User Permanently?'}</DialogTitle>
         <DialogContent>
-          <Typography sx={{ color: '#fff', mb: 2 }}>{ar ? 'هل أنت متأكد؟ سيتم حذف جميع بيانات المستخدم واشتراكاته من النظام ولا يمكن التراجع عن هذا الإجراء.' : 'Are you sure? This action will wipe all user data and enrollments. This cannot be undone.'}</Typography>
+          <Typography sx={{ color: '#fff', mb: 2 }}>{ar ? 'هل أنت متأكد؟ سيتم حذف جميع بيانات المستخدم واشتراكاته من النظام ولا يمكن التراجع عن هذا الإجراء.' : 'Are you sure? This action will wipe all user data and enrollments.'}</Typography>
           <Box sx={{ p: 2, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 2, border: `1px dashed ${palette.danger}` }}>
             <Typography sx={{ color: '#fff', fontWeight: 800 }}>{selectedUser?.firstName} {selectedUser?.lastName}</Typography>
             <Typography sx={{ color: palette.textSec, fontSize: '0.85rem' }}>{selectedUser?.email}</Typography>
@@ -707,11 +702,11 @@ export default function AdminPage() {
         </DialogActions>
       </Dialog>
 
-      {/* 🔴 Confirm Delete Package Dialog (الجديد) */}
+      {/* 🔴 Confirm Delete Package Dialog */}
       <Dialog open={deletePackageDialogOpen} onClose={() => setDeletePackageDialogOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `2px solid ${palette.danger}`, borderRadius: 4, minWidth: 350 } }}>
         <DialogTitle sx={{ color: palette.danger, fontWeight: 900 }}>{ar ? '🗑️ حذف الباقة التعليمية؟' : '🗑️ Delete Educational Package?'}</DialogTitle>
         <DialogContent>
-          <Typography sx={{ color: '#fff', mb: 2 }}>{ar ? 'سيتم حذف الباقة من المتجر. لن يتمكن الطلاب الجدد من شرائها، ولكن الطلاب المشتركين مسبقاً لن يتأثروا.' : 'This will remove the package from the store. New students won\'t be able to buy it.'}</Typography>
+          <Typography sx={{ color: '#fff', mb: 2 }}>{ar ? 'سيتم حذف الباقة من المتجر. لن يتمكن الطلاب الجدد من شرائها، ولكن الطلاب المشتركين مسبقاً لن يتأثروا.' : 'This will remove the package from the store.'}</Typography>
           <Typography sx={{ color: palette.primary, fontWeight: 800, textAlign: 'center' }}>{selectedPackage?.name}</Typography>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
@@ -860,7 +855,24 @@ export default function AdminPage() {
           {selectedPackage ? (ar ? 'تعديل الباقة' : 'Edit Package') : (ar ? 'إنشاء باقة جديدة' : 'Create New Package')}
         </DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-          <TextField label={ar ? 'اسم الباقة (مثال: Basic)' : 'Package Name'} value={packageForm.name} onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }} />
+          
+          <FormControl fullWidth sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}>
+            <InputLabel sx={{ color: palette.textSec }}>{ar ? 'نوع الباقة' : 'Package Type'}</InputLabel>
+            <Select
+              value={packageForm.name}
+              label={ar ? 'نوع الباقة' : 'Package Type'}
+              onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })}
+              sx={{ color: '#fff' }}
+            >
+              {/* 🔴 إضافة اختيار ALL لفتح كل الكورسات */}
+              <MenuItem value="ALL">{ar ? 'فتح كل الكورسات (ALL)' : 'ALL Courses'}</MenuItem>
+              <MenuItem value="BASIC">Basic</MenuItem>
+              <MenuItem value="STANDARD">Standard</MenuItem>
+              <MenuItem value="PREMIUM">Premium</MenuItem>
+              <MenuItem value="ENTERPRISE">Enterprise</MenuItem>
+            </Select>
+          </FormControl>
+
           <TextField label={ar ? 'سعر الباقة ($)' : 'Package Price ($)'} type="number" value={packageForm.price} onChange={(e) => setPackageForm({ ...packageForm, price: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }} />
           <TextField label={ar ? 'عدد الكورسات المتاحة' : 'Available Courses Count'} type="number" value={packageForm.coursesCount} onChange={(e) => setPackageForm({ ...packageForm, coursesCount: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }} />
           <TextField label={ar ? 'رابط صورة الباقة (Thumbnail)' : 'Thumbnail URL'} value={packageForm.thumbnailUrl} onChange={(e) => setPackageForm({ ...packageForm, thumbnailUrl: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }} />

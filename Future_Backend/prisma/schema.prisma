@@ -30,7 +30,9 @@ enum CourseStatus {
   ARCHIVED
 }
 
+// 🔴 تم إضافة ALL هنا لتعريف النوع الشامل في قاعدة البيانات
 enum PackageType {
+  ALL
   BASIC
   STANDARD
   PREMIUM
@@ -265,11 +267,11 @@ model UserCourse {
   id       String   @id @default(uuid())
 
   userId   String
-  // 🔴 تم إضافة Cascade هنا عشان لو اليوزر اتمسح اشتراكاته تتمسح
+  // 🔴 Cascade لضمان حذف اشتراكات المستخدم عند حذفه
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   courseId String
-  // 🔴 تم إضافة Cascade هنا عشان لو الكورس اتمسح سجلات الشراء تتمسح
+  // 🔴 Cascade لضمان حذف السجلات عند حذف الكورس نفسه
   course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   status   PurchaseStatus @default(PENDING)
@@ -286,7 +288,7 @@ model UserCourse {
   completedAt    DateTime?
 
   affiliateTrackingId String?
-  // 🔴 تم إضافة Cascade هنا عشان تتبع العمولة
+  // 🔴 Cascade لضمان سلامة بيانات تتبع العمولة
   affiliateTracking   AffiliateTracking? @relation(fields: [affiliateTrackingId], references: [id], onDelete: Cascade)
 
   purchasedAt DateTime @default(now())
@@ -301,15 +303,15 @@ model AffiliateTracking {
   id String @id @default(uuid())
 
   referrerId String
-  // 🔴 تم إضافة Cascade هنا (المسوق)
+  // 🔴 Cascade للمسوق
   referrer   User   @relation("ReferrerUser", fields: [referrerId], references: [id], onDelete: Cascade)
 
   referredUserId String
-  // 🔴 تم إضافة Cascade هنا (الطالب المحال)
+  // 🔴 Cascade للطالب المحال
   referredUser   User   @relation("ReferredUser", fields: [referredUserId], references: [id], onDelete: Cascade)
 
   courseId String?
-  // 🔴 تم إضافة Cascade هنا (الكورس المرتبط)
+  // 🔴 Cascade للكورس
   course   Course? @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   commissionAmount Float  @default(0)
@@ -334,12 +336,12 @@ model PresentationInvite {
   id String @id @default(uuid())
 
   senderId String
-  // 🔴 تم إضافة Cascade هنا
+  // 🔴 Cascade للراسل
   sender   User   @relation("SentInvites", fields: [senderId], references: [id], onDelete: Cascade)
 
   // 🔴 Inspector ID
   inspectorId String
-  // 🔴 تم إضافة Cascade هنا
+  // 🔴 Cascade للمفتش
   inspector   User   @relation("ReceivedInvites", fields: [inspectorId], references: [id], onDelete: Cascade)
 
   attendeeIds String[] 
@@ -367,7 +369,7 @@ model WithdrawalRequest {
   id String @id @default(uuid())
 
   userId String
-  // 🔴 تم إضافة Cascade هنا
+  // 🔴 Cascade لطلبات السحب
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   amount   Float
@@ -412,15 +414,15 @@ model InspectorNote {
   id          String   @id @default(uuid())
 
   inspectorId String
-  // 🔴 تم إضافة Cascade هنا
+  // 🔴 Cascade للمفتش
   inspector   User     @relation("InspectorNotes", fields: [inspectorId], references: [id], onDelete: Cascade)
 
   studentId   String
-  // 🔴 تم إضافة Cascade هنا
+  // 🔴 Cascade للطالب
   student     User     @relation("StudentNotes", fields: [studentId], references: [id], onDelete: Cascade)
 
   courseId    String
-  // 🔴 تم إضافة Cascade هنا
+  // 🔴 Cascade للكورس
   course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   note        String   @db.Text

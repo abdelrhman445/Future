@@ -6,7 +6,7 @@ import { Box, Button, Container, Grid, Card, CardContent, CardMedia, Chip, Typog
 import { PlayCircle, School, TrendingUp, Star, Login, PersonAdd, CheckCircle } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
-import { coursesApi } from '@/lib/api';
+import { coursesApi, adminApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 
 // ================= THEME PALETTE =================
@@ -29,11 +29,11 @@ export default function HomePage() {
   const { isAuthenticated } = useAuthStore();
   
   const [courses, setCourses] = useState<any[]>([]);
+  const [packages, setPackages] = useState<any[]>([]);
   const [statsData, setStatsData] = useState({ totalCourses: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // التوجيه التلقائي لو مسجل دخول
     if (isAuthenticated) {
       router.push(`/${locale}/dashboard`);
       return;
@@ -41,10 +41,12 @@ export default function HomePage() {
 
     const fetchLandingData = async () => {
       try {
-        // جلب أحدث/أشهر 3 كورسات
         const coursesRes = await coursesApi.list({ limit: 3 });
         const fetchedCourses = coursesRes.data?.data?.courses || coursesRes.data?.courses || [];
         setCourses(fetchedCourses);
+        
+        const pkgRes = await (adminApi as any).getPackages();
+        setPackages(pkgRes.data?.data || pkgRes.data || []);
 
         setStatsData({
           totalCourses: coursesRes.data?.data?.meta?.total || fetchedCourses.length || 50
@@ -59,23 +61,21 @@ export default function HomePage() {
     fetchLandingData();
   }, [isAuthenticated, router, locale]);
 
-  // إذا كان مسجل دخول، لا نعرض الصفحة أثناء التوجيه
   if (isAuthenticated) return <Box sx={{ minHeight: '100vh', bgcolor: palette.bg }} />;
 
-  // 🔴 تم إزالة كارت الطلاب وبقوا 3 فقط
   const stats = [
     { icon: <School sx={{ fontSize: 38, color: palette.primary }} />, value: `+${statsData.totalCourses}`, label: ar ? 'كورس متاح' : 'Available Courses' },
     { icon: <TrendingUp sx={{ fontSize: 38, color: palette.textMain }} />, value: '15%', label: ar ? 'عمولة إحالة' : 'Affiliate Commission' },
     { icon: <Star sx={{ fontSize: 38, color: palette.danger }} />, value: '24/7', label: ar ? 'دعم فني' : 'Technical Support' },
   ];
 
-  const packages = [
-    { id: 'silver', title: 'Silver', coursesCount: 15, price: 49, color: '#C0C0C0' },
-    { id: 'gold', title: 'Gold', coursesCount: 28, price: 89, color: '#FFD700' },
-    { id: 'platinum', title: 'Platinum', coursesCount: 35, price: 129, color: '#E5E4E2' },
-    { id: 'diamond', title: 'Diamond', coursesCount: 60, price: 199, color: palette.textMain },
-    { id: 'vip', title: 'VIP', coursesCount: ar ? 'جميع الكورسات' : 'All Courses', price: 299, color: palette.danger },
-  ];
+  const getPkgColor = (name: string) => {
+    const n = name.toUpperCase();
+    if (n.includes('VIP') || n.includes('ALL')) return palette.danger;
+    if (n.includes('GOLD')) return '#FFD700';
+    if (n.includes('SILVER')) return '#C0C0C0';
+    return palette.primary;
+  };
 
   return (
     <Box sx={{ minHeight: '100vh', background: palette.bg, overflowX: 'hidden' }}>
@@ -83,7 +83,6 @@ export default function HomePage() {
 
       {/* ================= HERO SECTION ================= */}
       <Box sx={{ position: 'relative', pt: { xs: 12, md: 20 }, pb: { xs: 12, md: 16 } }}>
-        {/* Glow Effects */}
         <Box sx={{ position: 'absolute', top: '-10%', left: '10%', width: '50vw', height: '50vw', background: `radial-gradient(circle, ${palette.cardBg} 0%, transparent 70%)`, filter: 'blur(80px)', zIndex: 0, opacity: 0.6 }} />
         <Box sx={{ position: 'absolute', bottom: '-10%', right: '-10%', width: '40vw', height: '40vw', background: `radial-gradient(circle, rgba(48,192,242,0.15) 0%, transparent 70%)`, filter: 'blur(80px)', zIndex: 0 }} />
 
@@ -105,14 +104,13 @@ export default function HomePage() {
                 : 'Future platform is your ultimate guide to digital learning. Join now, start learning, and earn 15% commission for everyone you invite!'}
             </Typography>
 
-            {/* 🔴 تم التعديل هنا: إضافة display flex و gap لإعطاء براح للأيقونات */}
             <Box sx={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
               <Button 
                 component={Link} href={`/${locale}/login`} 
                 variant="contained" 
                 size="large"
                 sx={{ 
-                  display: 'flex', alignItems: 'center', gap: 1.5, // 🔴 البراح هنا
+                  display: 'flex', alignItems: 'center', gap: 1.5, 
                   px: 5, py: 1.8, fontSize: '1.1rem', fontWeight: 800, color: '#000',
                   background: `linear-gradient(135deg, ${palette.primary}, ${palette.primaryHover})`, 
                   boxShadow: `0 10px 30px rgba(48,192,242,0.4)`, 
@@ -128,7 +126,7 @@ export default function HomePage() {
                 variant="outlined" 
                 size="large"
                 sx={{ 
-                  display: 'flex', alignItems: 'center', gap: 1.5, // 🔴 البراح هنا
+                  display: 'flex', alignItems: 'center', gap: 1.5, 
                   px: 5, py: 1.8, fontSize: '1.1rem', fontWeight: 800,
                   borderColor: palette.border, color: palette.textMain, borderWidth: 2,
                   borderRadius: 3,
@@ -147,7 +145,7 @@ export default function HomePage() {
       <Container maxWidth="lg" sx={{ py: 4, position: 'relative', zIndex: 2, mt: -8 }}>
         <Grid container spacing={4} justifyContent="center">
           {stats.map((stat, i) => (
-            <Grid item xs={12} sm={4} key={i}> {/* 🔴 تعديل المقاس ليكونوا 3 فقط ماليين الشاشة */}
+            <Grid item xs={12} sm={4} key={i}>
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 + 0.3 }}>
                 <Card sx={{ 
                   textAlign: 'center', p: 4, background: palette.cardBg, border: `1px solid ${palette.border}`, 
@@ -225,55 +223,34 @@ export default function HomePage() {
       <Box sx={{ background: `linear-gradient(to bottom, ${palette.bg}, ${palette.cardBg})`, py: 12 }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 8 }}>
-            <Typography variant="h3" sx={{ fontWeight: 900, color: '#fff', mb: 2 }}>
-              {ar ? '💎 باقات الاشتراك' : '💎 Subscription Packages'}
-            </Typography>
-            <Typography sx={{ color: palette.textSec, fontSize: '1.2rem' }}>
-              {ar ? 'اختر الباقة التي تناسب طموحك وابدأ فوراً' : 'Choose the package that fits your ambition'}
-            </Typography>
+            <Typography variant="h3" sx={{ fontWeight: 900, color: '#fff', mb: 2 }}>{ar ? '💎 باقات الاشتراك' : '💎 Subscription Packages'}</Typography>
+            <Typography sx={{ color: palette.textSec, fontSize: '1.2rem' }}>{ar ? 'اختر الباقة التي تناسب طموحك وابدأ فوراً' : 'Choose the package that fits your ambition'}</Typography>
           </Box>
-
           <Grid container spacing={4} justifyContent="center">
-            {/* 🔴 تم التعديل: الباقات الآن تأخذ مساحة أكبر (تُعرض 3 في الصف الأول و 2 في الصف الثاني) وتم تكبير حجم الخطوط بداخلها */}
-            {packages.map((pkg, i) => (
-              <Grid item xs={12} sm={6} md={4} key={pkg.id}>
-                <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
-                  <Card sx={{ 
-                    p: { xs: 4, md: 5 }, // تكبير الـ Padding الداخلي
-                    textAlign: 'center', borderRadius: 4, height: '100%',
-                    background: pkg.id === 'vip' ? `linear-gradient(135deg, ${palette.cardBg}, rgba(230, 47, 118, 0.2))` : palette.bg, 
-                    border: `2px solid ${pkg.id === 'vip' ? palette.danger : palette.border}`, 
-                    position: 'relative', overflow: 'hidden',
-                    transition: 'all 0.3s', '&:hover': { transform: 'translateY(-10px)', boxShadow: `0 15px 40px ${pkg.color}40` }
-                  }}>
-                    {pkg.id === 'vip' && (
-                      <Box sx={{ position: 'absolute', top: 20, right: -35, background: palette.danger, color: '#fff', px: 5, py: 0.5, transform: 'rotate(45deg)', fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: 1 }}>
-                        {ar ? 'الأفضل' : 'BEST'}
+            {packages.map((pkg, i) => {
+              const pColor = getPkgColor(pkg.name);
+              const isVIP = pkg.name.toUpperCase().includes('VIP') || pkg.name.toUpperCase().includes('ALL');
+              return (
+                <Grid item xs={12} sm={6} md={4} key={pkg.id}>
+                  <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
+                    <Card sx={{ 
+                      p: { xs: 4, md: 5 }, textAlign: 'center', borderRadius: 4, height: '100%',
+                      background: isVIP ? `linear-gradient(135deg, ${palette.cardBg}, rgba(230, 47, 118, 0.2))` : palette.bg, 
+                      border: `2px solid ${isVIP ? palette.danger : palette.border}`, 
+                      position: 'relative', overflow: 'hidden', transition: 'all 0.3s', '&:hover': { transform: 'translateY(-10px)', boxShadow: `0 15px 40px ${pColor}40` }
+                    }}>
+                      {isVIP && <Box sx={{ position: 'absolute', top: 20, right: -35, background: palette.danger, color: '#fff', px: 5, py: 0.5, transform: 'rotate(45deg)', fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: 1 }}>{ar ? 'الأفضل' : 'BEST'}</Box>}
+                      <Typography sx={{ color: pColor, fontWeight: 900, fontSize: '1.8rem', mb: 1, textTransform: 'uppercase', letterSpacing: 1 }}>{pkg.name}</Typography>
+                      <Typography sx={{ color: '#fff', fontSize: '3.5rem', fontWeight: 900, my: 3 }}>${pkg.price}</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, mb: 4, color: palette.textSec }}>
+                        <CheckCircle sx={{ color: pColor, fontSize: 24 }} /><Typography sx={{ fontWeight: 700, fontSize: '1.2rem' }}>{isVIP ? (ar ? 'جميع الكورسات' : 'All Courses') : `${pkg.coursesCount} ${ar ? 'كورس' : 'Courses'}`}</Typography>
                       </Box>
-                    )}
-                    <Typography sx={{ color: pkg.color, fontWeight: 900, fontSize: '1.8rem', mb: 1, textTransform: 'uppercase', letterSpacing: 1 }}>
-                      {pkg.title}
-                    </Typography>
-                    <Typography sx={{ color: '#fff', fontSize: '3.5rem', fontWeight: 900, my: 3 }}>
-                      ${pkg.price}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, mb: 4, color: palette.textSec }}>
-                      <CheckCircle sx={{ color: pkg.color, fontSize: 24 }} />
-                      <Typography sx={{ fontWeight: 700, fontSize: '1.2rem' }}>{pkg.coursesCount} {ar ? 'كورس' : 'Courses'}</Typography>
-                    </Box>
-                    <Button component={Link} href={`/${locale}/register`} fullWidth variant="contained" 
-                      sx={{ 
-                        bgcolor: pkg.id === 'vip' ? palette.danger : palette.primary, 
-                        color: pkg.id === 'vip' ? '#fff' : '#000', 
-                        fontWeight: 800, py: 1.8, fontSize: '1.1rem', borderRadius: 2,
-                        '&:hover': { bgcolor: pkg.color, color: '#000' }
-                      }}>
-                      {ar ? 'اشترك الآن' : 'Subscribe'}
-                    </Button>
-                  </Card>
-                </motion.div>
-              </Grid>
-            ))}
+                      <Button component={Link} href={`/${locale}/register`} fullWidth variant="contained" sx={{ bgcolor: isVIP ? palette.danger : palette.primary, color: isVIP ? '#fff' : '#000', fontWeight: 800, py: 1.8, fontSize: '1.1rem', borderRadius: 2, '&:hover': { bgcolor: pColor, color: '#000' } }}>{ar ? 'اشترك الآن' : 'Subscribe'}</Button>
+                    </Card>
+                  </motion.div>
+                </Grid>
+              );
+            })}
           </Grid>
         </Container>
       </Box>
