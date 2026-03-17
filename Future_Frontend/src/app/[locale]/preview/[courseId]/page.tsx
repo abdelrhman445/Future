@@ -4,13 +4,17 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import {
   Box, Container, Typography, Grid, Card, List, ListItemButton, ListItemText,
-  CircularProgress, alpha, Chip, Button
+  CircularProgress, alpha, Chip, Button, IconButton, Slider
 } from '@mui/material';
 import { 
   LockRounded, PlayCircleOutlineRounded, MenuBookRounded, ShieldRounded,
-  ShoppingCartRounded
+  ShoppingCartRounded, PauseRounded, PlayArrowRounded, VolumeUpRounded, 
+  VolumeOffRounded, FullscreenRounded
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// 🔴 استدعاء المشغل الاحترافي
+import ReactPlayer from 'react-player/youtube';
 
 import Navbar from '@/components/layout/Navbar';
 import { coursesApi, mediaApi } from '@/lib/api';
@@ -28,6 +32,17 @@ const palette = {
   textSec: '#a0ddf1',
   success: '#4ade80',
   locked: '#3f3f46' // لون رمادي غامق جداً للأقفال
+};
+
+// ================= دالة تنسيق الوقت =================
+const formatTime = (seconds: number) => {
+  if (isNaN(seconds)) return '00:00';
+  const date = new Date(seconds * 1000);
+  const hh = date.getUTCHours();
+  const mm = date.getUTCMinutes();
+  const ss = date.getUTCSeconds().toString().padStart(2, '0');
+  if (hh) return `${hh}:${mm.toString().padStart(2, '0')}:${ss}`;
+  return `${mm}:${ss}`;
 };
 
 // ================= ANIMATION VARIANTS =================
@@ -56,11 +71,24 @@ export default function PreviewPlayerPage() {
   const [loading, setLoading] = useState(true);
   
   const [watermarkPos, setWatermarkPos] = useState({ top: '10%', left: '10%' });
+  const [isClient, setIsClient] = useState(false);
+
+  // ================= STATES للتحكم في الفيديو =================
+  const playerRef = useRef<any>(null);
+  const playerContainerRef = useRef<HTMLDivElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [played, setPlayed] = useState(0);
+  const [seeking, setSeeking] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(0.8);
+  const [muted, setMuted] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
 
   const studentIdentifier = user ? `${user.firstName} ${user.lastName} - ${user.email}` : "Free Preview - Guest";
 
   // 1. الحماية من الكليك يمين واختصارات الكيبورد
   useEffect(() => {
+    setIsClient(true);
     loadCourse();
 
     const moveWatermark = setInterval(() => {
@@ -69,20 +97,25 @@ export default function PreviewPlayerPage() {
       setWatermarkPos({ top: `${top}%`, left: `${left}%` });
     }, 4000);
 
-    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+    const handleContextMenu = (e: MouseEvent) => { e.preventDefault(); e.stopPropagation(); return false; };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I', 'i', 'C', 'c', 'J', 'j'].includes(e.key)) || (e.ctrlKey && ['U', 'u', 'S', 's', 'P', 'p'].includes(e.key))) {
-        e.preventDefault();
+        e.preventDefault(); e.stopPropagation(); return false;
       }
     };
+    const handleCopy = (e: ClipboardEvent) => { e.preventDefault(); e.stopPropagation(); return false; };
 
-    document.addEventListener('contextmenu', handleContextMenu);
-    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('contextmenu', handleContextMenu, { capture: true });
+    document.addEventListener('contextmenu', handleContextMenu, { capture: true });
+    document.addEventListener('keydown', handleKeyDown, { capture: true });
+    document.addEventListener('copy', handleCopy, { capture: true });
 
     return () => {
       clearInterval(moveWatermark);
-      document.removeEventListener('contextmenu', handleContextMenu);
-      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('contextmenu', handleContextMenu, { capture: true });
+      document.removeEventListener('contextmenu', handleContextMenu, { capture: true });
+      document.removeEventListener('keydown', handleKeyDown, { capture: true });
+      document.removeEventListener('copy', handleCopy, { capture: true });
     };
   }, []);
 
@@ -125,12 +158,55 @@ export default function PreviewPlayerPage() {
 
     setActiveLesson(lesson);
     setVideoUrl(''); 
+    setPlaying(false);
+    setPlayed(0);
     
     try {
       const res = await mediaApi.getStreamUrl(lesson.id);
       const embedUrl = res.data?.data?.streamUrl || res.data?.data?.embedUrl || res.data?.embedUrl || res.data?.streamUrl;
-      setVideoUrl(embedUrl);
+      
+      // تحويل الرابط ليناسب ReactPlayer
+      let finalUrl = embedUrl;
+      if (embedUrl && embedUrl.includes('youtube.com/embed/')) {
+        const videoId = embedUrl.split('youtube.com/embed/')[1].split('?')[0];
+        finalUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      }
+      setVideoUrl(finalUrl);
     } catch (err) { console.log(err); }
+  };
+
+  // ================= دوال التحكم في الفيديو =================
+  const handlePlayPause = () => setPlaying(!playing);
+  
+  const handleProgress = (state: any) => {
+    if (!seeking) {
+      setPlayed(state.played);
+    }
+  };
+
+  const handleSeekChange = (_e: any, newValue: number | number[]) => {
+    setSeeking(true); 
+    setPlayed((newValue as number) / 100); 
+  };
+
+  const handleSeekMouseUp = (_e: any, newValue: number | number[]) => {
+    const fraction = (newValue as number) / 100;
+    if (playerRef.current) {
+      playerRef.current.seekTo(fraction, 'fraction');
+    }
+    setTimeout(() => {
+      setSeeking(false);
+    }, 300);
+  };
+
+  const handleToggleMute = () => setMuted(!muted);
+  
+  const handleToggleFullScreen = () => {
+    if (!document.fullscreenElement) {
+      playerContainerRef.current?.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
   };
 
   if (loading) {
@@ -185,38 +261,115 @@ export default function PreviewPlayerPage() {
           <Grid item xs={12} lg={8} component={motion.div} variants={itemVariants}>
             <Card sx={{ background: `linear-gradient(180deg, rgba(8, 69, 112, 0.4) 0%, rgba(10, 10, 15, 0.9) 100%)`, backdropFilter: 'blur(20px)', border: `1px solid ${alpha(palette.border, 0.3)}`, borderRadius: 6, overflow: 'hidden', boxShadow: `0 30px 60px rgba(0,0,0,0.6)` }}>
               
-              <Box sx={{ aspectRatio: '16/9', background: '#000', position: 'relative', overflow: 'hidden' }}>
-                <AnimatePresence mode="wait">
-                  {videoUrl ? (
-                    <Box component={motion.div} key="video" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} sx={{ width: '100%', height: '100%' }}>
-                      <iframe
-                        src={`${videoUrl}${videoUrl.includes('?') ? '&' : '?'}rel=0&modestbranding=1&showinfo=0&controls=1&fs=1`}
-                        className="w-full h-full"
-                        style={{ width: '100%', height: '100%', border: 'none' }}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
+              {/* 🛡️ حاوية الفيديو المؤمّن */}
+              <Box 
+                ref={playerContainerRef}
+                onMouseEnter={() => setIsHovering(true)}
+                onMouseLeave={() => setIsHovering(false)}
+                sx={{ aspectRatio: '16/9', background: '#000', position: 'relative', overflow: 'hidden' }}
+              >
+                {isClient && videoUrl ? (
+                  <>
+                    <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+                      <ReactPlayer
+                        ref={playerRef}
+                        key={videoUrl}
+                        url={videoUrl}
+                        width="100%"
+                        height="100%"
+                        playing={playing}
+                        volume={volume}
+                        muted={muted}
+                        onProgress={handleProgress}
+                        onDuration={(d) => setDuration(d)}
+                        controls={false} 
+                        config={{
+                          youtube: {
+                            playerVars: { modestbranding: 1, rel: 0, showinfo: 0, disablekb: 1, iv_load_policy: 3 }
+                          }
+                        }}
                       />
+                    </Box>
+                    
+                    {/* Click Overlay */}
+                    <Box 
+                      onClick={handlePlayPause}
+                      onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); return false; }}
+                      sx={{ position: 'absolute', top: '10%', bottom: '15%', left: 0, right: 0, zIndex: 30, cursor: 'pointer' }} 
+                    />
 
-                      {/* العلامة المائية */}
-                      <Box sx={{ position: 'absolute', top: watermarkPos.top, left: watermarkPos.left, color: 'rgba(255, 255, 255, 0.2)', fontSize: 'clamp(14px, 2vw, 22px)', fontWeight: 900, pointerEvents: 'none', transition: 'all 1s ease-in-out', textShadow: '2px 2px 4px rgba(0,0,0,0.9)', zIndex: 10, backgroundColor: 'rgba(0,0,0,0.3)', padding: '6px 16px', borderRadius: 3, backdropFilter: 'blur(4px)' }}>
-                        {studentIdentifier}
+                    {/* DYNAMIC WATERMARK */}
+                    <Box
+                      sx={{
+                        position: 'absolute', top: watermarkPos.top, left: watermarkPos.left,
+                        color: 'rgba(255, 255, 255, 0.25)', fontSize: 'clamp(10px, 1.2vw, 16px)', fontWeight: 900,
+                        pointerEvents: 'none', transition: 'top 1s ease-in-out, left 1s ease-in-out',
+                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)', zIndex: 20, backgroundColor: 'rgba(0,0,0,0.2)',
+                        padding: '4px 12px', borderRadius: 2, backdropFilter: 'blur(2px)'
+                      }}
+                    >
+                      {studentIdentifier}
+                    </Box>
+
+                    {/* Top Shield to hide YouTube title/logo on hover */}
+                    <Box onContextMenu={(e) => { e.preventDefault(); return false; }} sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: '80px', background: 'transparent', zIndex: 40 }} />
+
+                    {/* 🔴 Custom Controls 🔴 */}
+                    <Box
+                      sx={{
+                        position: 'absolute', bottom: 0, left: 0, right: 0,
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%)',
+                        padding: { xs: '10px 15px 5px', md: '20px 20px 10px' }, zIndex: 50,
+                        opacity: isHovering || !playing || seeking ? 1 : 0, 
+                        transition: 'opacity 0.3s ease-in-out',
+                        display: 'flex', flexDirection: 'column', gap: { xs: 0.5, md: 1 }
+                      }}
+                    >
+                      <Slider
+                        value={played * 100}
+                        onChange={handleSeekChange}
+                        onChangeCommitted={handleSeekMouseUp}
+                        sx={{
+                          color: palette.primary, height: 4, padding: '10px 0',
+                          '& .MuiSlider-thumb': { width: 12, height: 12, transition: '0.2s', '&:hover, &.Mui-focusVisible': { boxShadow: `0px 0px 0px 8px ${alpha(palette.primary, 0.16)}` } },
+                          '& .MuiSlider-rail': { opacity: 0.3, backgroundColor: '#fff' }
+                        }}
+                      />
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 } }}>
+                          <IconButton onClick={handlePlayPause} sx={{ color: '#fff', p: { xs: 0.5, md: 1 }, '&:hover': { color: palette.primary } }}>
+                            {playing ? <PauseRounded sx={{ fontSize: { xs: 28, md: 32 } }} /> : <PlayArrowRounded sx={{ fontSize: { xs: 28, md: 32 } }} />}
+                          </IconButton>
+                          <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1, width: { sm: 80, md: 100 } }}>
+                            <IconButton onClick={handleToggleMute} sx={{ color: '#fff', p: 0.5, '&:hover': { color: palette.primary } }}>
+                              {muted || volume === 0 ? <VolumeOffRounded /> : <VolumeUpRounded />}
+                            </IconButton>
+                            <Slider
+                              size="small" min={0} max={1} step={0.05} value={muted ? 0 : volume}
+                              onChange={(_e, val) => { setVolume(val as number); setMuted(false); }}
+                              sx={{ color: '#fff', '& .MuiSlider-thumb': { width: 8, height: 8 } }}
+                            />
+                          </Box>
+                          <Typography sx={{ color: '#fff', fontSize: { xs: '0.7rem', md: '0.85rem' }, fontWeight: 600, ml: { xs: 0.5, md: 2 }, fontFamily: 'monospace' }}>
+                            {formatTime(played * duration)} / {formatTime(duration)}
+                          </Typography>
+                        </Box>
+                        <IconButton onClick={handleToggleFullScreen} sx={{ color: '#fff', '&:hover': { color: palette.primary } }}>
+                          <FullscreenRounded fontSize="medium" />
+                        </IconButton>
                       </Box>
-
-                      {/* الدروع الذكية */}
-                      <Box onContextMenu={(e) => e.preventDefault()} sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: '50px', background: 'transparent', zIndex: 5 }} />
-                      <Box onContextMenu={(e) => e.preventDefault()} sx={{ position: 'absolute', bottom: 0, right: 0, width: '90px', height: '50px', background: 'transparent', zIndex: 5 }} />
                     </Box>
-                  ) : (
-                    <Box component={motion.div} key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 3, background: 'rgba(8,69,112,0.1)' }}>
-                      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 4, ease: "linear" }}>
-                        <PlayCircleOutlineRounded sx={{ fontSize: 80, color: alpha(palette.primary, 0.3) }} />
-                      </motion.div>
-                      <Typography color={palette.textSec} sx={{ fontWeight: 700, fontSize: '1.2rem', letterSpacing: 1 }}>
-                        {ar ? 'جاري تحضير الدرس المجاني...' : 'Preparing free preview...'}
-                      </Typography>
-                    </Box>
-                  )}
-                </AnimatePresence>
+                  </>
+                ) : (
+                  <Box component={motion.div} key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 3, background: 'rgba(8,69,112,0.1)' }}>
+                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 4, ease: "linear" }}>
+                      <PlayCircleOutlineRounded sx={{ fontSize: 80, color: alpha(palette.primary, 0.3) }} />
+                    </motion.div>
+                    <Typography color={palette.textSec} sx={{ fontWeight: 700, fontSize: '1.2rem', letterSpacing: 1 }}>
+                      {ar ? 'جاري تحضير الدرس المجاني...' : 'Preparing free preview...'}
+                    </Typography>
+                  </Box>
+                )}
               </Box>
 
               <Box sx={{ p: { xs: 3, md: 4 } }}>
@@ -259,7 +412,7 @@ export default function PreviewPlayerPage() {
                               opacity: isFree ? 1 : 0.45, 
                               cursor: isFree ? 'pointer' : 'not-allowed',
                               '&.Mui-selected': { background: `linear-gradient(90deg, ${alpha(palette.primary, 0.15)} 0%, transparent 100%)`, borderLeft: `4px solid ${palette.primary}` },
-                              '&:hover': { background: isFree ? 'rgba(48,192,242,0.05)' : 'transparent', pl: isFree ? 4 : 3 } // Animation on hover
+                              '&:hover': { background: isFree ? 'rgba(48,192,242,0.05)' : 'transparent', pl: isFree ? 4 : 3 } 
                             }}
                           >
                             <Box sx={{ mr: 2.5, display: 'flex', alignItems: 'center' }}>
