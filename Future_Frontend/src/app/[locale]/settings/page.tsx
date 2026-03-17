@@ -67,7 +67,8 @@ export default function SettingsPage() {
   const router = useRouter();
   const ar = locale === 'ar';
   
-  const { isAuthenticated, user, logout, checkAuth } = useAuthStore();
+  // 🔴 تم إزالة checkAuth من هنا عشان نتجنب الـ TypeError
+  const { isAuthenticated, user, logout } = useAuthStore();
   
   const [isMounted, setIsMounted] = useState(false);
   const [tab, setTab] = useState(0);
@@ -104,12 +105,26 @@ export default function SettingsPage() {
     if (!profileForm.firstName || !profileForm.lastName) {
       return toast.error(ar ? 'الاسم الأول والأخير مطلوبان' : 'First and Last name are required');
     }
+    
+    if (loading.profile) return; // منع الضغط المتكرر
+    
     setLoading({ ...loading, profile: true });
     try {
       await usersApi.updateProfile(profileForm);
+      
+      // 🔴 التحديث اليدوي الفوري للمتجر (بدون استخدام الدالة اللي بتعمل Error)
+      useAuthStore.setState({ 
+        user: { 
+          ...user, 
+          firstName: profileForm.firstName, 
+          lastName: profileForm.lastName 
+        } 
+      });
+      
+      // رسالة النجاح في الآخر خالص عشان نضمن إن مفيش Error هيحصل
       toast.success(ar ? 'تم تحديث البيانات بنجاح ✓' : 'Profile updated successfully ✓');
-      checkAuth(); 
     } catch (err: any) {
+      console.error("Update Profile Error:", err); // لسهولة التتبع في الـ Console
       toast.error(err.response?.data?.message || (ar ? 'فشل التحديث' : 'Update failed'));
     } finally {
       setLoading({ ...loading, profile: false });
@@ -127,16 +142,21 @@ export default function SettingsPage() {
       return toast.error(ar ? 'كلمة المرور يجب أن تكون 8 أحرف على الأقل' : 'Password must be at least 8 characters');
     }
 
+    if (loading.password) return; // منع الضغط المتكرر
+
     setLoading({ ...loading, password: true });
     try {
       await usersApi.changePassword({
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword
       });
-      toast.success(ar ? 'تم تغيير كلمة المرور بنجاح، يرجى تسجيل الدخول مجدداً 🔒' : 'Password changed. Please login again 🔒');
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setTimeout(() => logout(), 2000); 
+      
+      // رسالة النجاح بعد تنفيذ كل المهام بنجاح
+      toast.success(ar ? 'تم تغيير كلمة المرور بنجاح، يرجى تسجيل الدخول مجدداً 🔒' : 'Password changed. Please login again 🔒');
     } catch (err: any) {
+      console.error("Change Password Error:", err);
       toast.error(err.response?.data?.message || (ar ? 'فشل تغيير كلمة المرور' : 'Failed to change password'));
     } finally {
       setLoading({ ...loading, password: false });
@@ -146,16 +166,21 @@ export default function SettingsPage() {
   const handleDeleteAccount = async () => {
     if (!deletePassword) return toast.error(ar ? 'يرجى إدخال كلمة المرور' : 'Please enter your password');
     
+    if (loading.delete) return; // منع الضغط المتكرر
+
     setLoading({ ...loading, delete: true });
     try {
       await usersApi.deleteAccount({ password: deletePassword });
-      toast.success(ar ? 'تم حذف الحساب نهائياً 🗑️' : 'Account deleted permanently 🗑️');
       setDeleteDialogOpen(false);
       setTimeout(() => {
         logout();
         router.push(`/${locale}/`);
       }, 1500);
+      
+      // رسالة النجاح بعد تنفيذ كل المهام
+      toast.success(ar ? 'تم حذف الحساب نهائياً 🗑️' : 'Account deleted permanently 🗑️');
     } catch (err: any) {
+      console.error("Delete Account Error:", err);
       toast.error(err.response?.data?.message || (ar ? 'كلمة المرور غير صحيحة أو فشل الحذف' : 'Incorrect password or deletion failed'));
     } finally {
       setLoading({ ...loading, delete: false });
@@ -232,7 +257,7 @@ export default function SettingsPage() {
                   </motion.div>
                 )}
 
-                {/* ================= TAB 1: SECURITY (🔴 بروفيشنال وتوسيط لليمين) ================= */}
+                {/* ================= TAB 1: SECURITY ================= */}
                 {tab === 1 && (
                   <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{opacity: 0, x: -20}}>
                     <Stack spacing={2.5} sx={{ maxWidth: '100%' }} dir={ar ? 'rtl' : 'ltr'}>
