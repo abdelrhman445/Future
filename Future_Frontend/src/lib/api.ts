@@ -92,6 +92,8 @@ export const usersApi = {
     api.put('/users/change-password', data),
   deleteAccount: (data: any) => 
     api.delete('/users/delete-account', { data }),
+  updateProgress: (courseId: string, lessonId: string) =>
+  api.patch(`/users/courses/${courseId}/progress`, { lessonId }),
 };
 
 // ==================== COURSES ====================

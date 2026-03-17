@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   Box, Container, Grid, Card, CardContent, CardMedia, Typography, 
-  Button, Avatar, Chip, Divider, CircularProgress, Stack, alpha, keyframes 
+  Button, Avatar, Chip, Divider, CircularProgress, Stack, alpha, keyframes, LinearProgress 
 } from '@mui/material';
 import { 
   PlayCircle, School, TrendingUp, People, ArrowForward, 
@@ -162,7 +162,7 @@ export default function DashboardPage() {
           </Box>
         </motion.div>
 
-        {/* ================= Stats Grid (🔴 تم ضبط المسافات هنا) ================= */}
+        {/* ================= Stats Grid ================= */}
         <Grid container spacing={3} sx={{ mb: 6 }} component={motion.div} variants={staggerContainer}>
           {[
             { icon: <School sx={{ fontSize: 36 }} />, value: completedCourses.length, label: ar ? 'كورساتي المفعّلة' : 'Active Courses', color: palette.primary },
@@ -174,16 +174,15 @@ export default function DashboardPage() {
                 component={motion.div}
                 whileHover={{ y: -5, transition: { duration: 0.2 } }}
                 sx={{ 
-                  p: { xs: 3, md: 4 }, // تكبير البادينج عشان الكارت يتنفس
+                  p: { xs: 3, md: 4 }, 
                   background: 'rgba(8, 69, 112, 0.4)', backdropFilter: 'blur(10px)', 
                   border: `1px solid rgba(37,154,203,0.3)`, borderRadius: 5,
                   transition: 'all 0.3s', '&:hover': { borderColor: stat.color, background: alpha(stat.color, 0.05), boxShadow: `0 10px 30px rgba(0,0,0,0.5)` }
                 }}
               >
-                {/* تم تعديل الـ direction لـ row-reverse والـ justifyContent لضبط المسافات */}
                 <Stack direction="row-reverse" alignItems="center" justifyContent="space-between" spacing={3}>
                   <Box sx={{ 
-                    p: 2, // تكبير مساحة الأيقونة
+                    p: 2, 
                     borderRadius: 4, 
                     background: alpha(stat.color, 0.15), 
                     color: stat.color, 
@@ -307,6 +306,28 @@ export default function DashboardPage() {
                   <CardContent sx={{ p: 3 }}>
                     <Typography sx={{ fontWeight: 800, mb: 2, color: '#fff', fontSize: '1.1rem' }}>{uc.course.title}</Typography>
                     <Divider sx={{ borderColor: 'rgba(37,154,203,0.3)', mb: 3 }} />
+
+                    {/* 🔴 التعديل هنا: إضافة الـ Progress Bar */}
+                    <Box sx={{ mb: 3 }}>
+                      <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
+                        <Typography sx={{ fontSize: '0.8rem', color: palette.textSec }}>
+                          {ar ? 'التقدم' : 'Progress'}
+                        </Typography>
+                        <Typography sx={{ fontSize: '0.8rem', color: palette.primary, fontWeight: 800 }}>
+                          {Math.round(uc.progressPercent || 0)}%
+                        </Typography>
+                      </Stack>
+                      <LinearProgress
+                        variant="determinate"
+                        value={uc.progressPercent || 0}
+                        sx={{
+                          height: 4, borderRadius: 2,
+                          background: 'rgba(255,255,255,0.1)',
+                          '& .MuiLinearProgress-bar': { background: palette.primary, borderRadius: 2 }
+                        }}
+                      />
+                    </Box>
+
                     <Button 
                       component={Link} href={`/${locale}/my-courses/${uc.courseId}`} 
                       variant="contained" fullWidth startIcon={<PlayCircle sx={{ mr: 0.5 }} />} 

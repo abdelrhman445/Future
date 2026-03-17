@@ -314,4 +314,74 @@ router.post('/admin/refresh-affiliate-links', authenticate, requireAdmin, async 
   } catch (err) { next(err); }
 });
 
+// ==================== UPDATE COURSE PROGRESS ====================
+router.patch('/courses/:courseId/progress', authenticate, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { courseId } = req.params;
+    const { lessonId } = req.body;
+    const userId = req.user!.userId;
+
+    if (!lessonId) throw new AppError(400, 'يرجى إرسال معرف الدرس (lessonId)');
+
+    // 1. تأكد إن اليوزر مشترك في الكورس
+    const purchase = await prisma.userCourse.findUnique({
+      where: { userId_courseId: { userId, courseId } }
+    });
+    
+    if (!purchase || purchase.status !== 'COMPLETED') {
+      throw new AppError(403, 'غير مشترك في هذا الكورس');
+    }
+
+    // 2. تسجيل الدرس في جدول (LessonProgress) عشان نبقى عارفين إنه شافه فعلاً
+    await prisma.lessonProgress.upsert({
+      where: {
+        userId_lessonId: { userId, lessonId }
+      },
+      update: {
+        watchedAt: new Date() // لو شافه قبل كده، نحدث الوقت بس
+      },
+      create: {
+        userId,
+        lessonId,
+        courseId,
+        watchedAt: new Date()
+      }
+    });
+
+    // 3. جيب إجمالي دروس الكورس اللي منشورة فعلياً
+    const totalLessons = await prisma.lesson.count({
+      where: { 
+        section: { courseId },
+        isPublished: true // نحسب الدروس المنشورة بس
+      }
+    });
+
+    // 4. جيب عدد الدروس اللي الطالب خلصها فعلياً في الكورس ده
+    const completedLessons = await prisma.lessonProgress.count({
+      where: { userId, courseId }
+    });
+
+    // 5. احسب نسبة التقدم الحقيقية
+    const progressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+
+    // 6. حدث نسبة التقدم في جدول UserCourse
+    const updated = await prisma.userCourse.update({
+      where: { userId_courseId: { userId, courseId } },
+      data: {
+        progressPercent,
+        lastAccessedAt: new Date(),
+        ...(progressPercent >= 100 && { completedAt: new Date() }) // لو قفل 100%، سجل وقت الانتهاء
+      }
+    });
+
+    sendSuccess(res, { 
+      progressPercent: updated.progressPercent, 
+      completedLessons, 
+      totalLessons 
+    }, 'تم تسجيل تقدمك بنجاح');
+  } catch (err) { 
+    next(err); 
+  }
+});
+
 export default router;

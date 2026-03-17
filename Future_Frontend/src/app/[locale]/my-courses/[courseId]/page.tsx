@@ -17,7 +17,8 @@ import { motion } from 'framer-motion';
 import ReactPlayer from 'react-player/youtube';
 
 import Navbar from '@/components/layout/Navbar';
-import { coursesApi, mediaApi } from '@/lib/api';
+// 🔴 التعديل الأول: إضافة usersApi هنا
+import { coursesApi, mediaApi, usersApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 
 // ================= THEME PALETTE =================
@@ -138,13 +139,27 @@ export default function CoursePlayerPage() {
     } catch (err) { console.log(err); }
   };
 
-  const toggleLessonCompletion = (e: React.MouseEvent, lessonId: string) => {
-    e.stopPropagation(); 
+  // 🔴 التعديل الثاني: استبدال الدالة القديمة بالدالة الجديدة اللي بتكلم الباك إند
+  const toggleLessonCompletion = async (e: React.MouseEvent, lessonId: string) => {
+    e.stopPropagation();
+    
+    // تحديث الـ UI فوراً
     setCompletedLessons(prev => {
-      const newState = prev.includes(lessonId) ? prev.filter(id => id !== lessonId) : [...prev, lessonId];
+      const newState = prev.includes(lessonId) 
+        ? prev.filter(id => id !== lessonId) 
+        : [...prev, lessonId];
       localStorage.setItem(`completed_lessons_${courseId}`, JSON.stringify(newState));
       return newState;
     });
+  
+    // لو بيضيف (مش بيشيل) — يبعت للباكند
+    if (!completedLessons.includes(lessonId)) {
+      try {
+        await usersApi.updateProgress(courseId, lessonId);
+      } catch (err) {
+        console.log('Progress update failed:', err);
+      }
+    }
   };
 
   // ================= دوال التحكم في الفيديو =================

@@ -110,6 +110,9 @@ model User {
   writtenNotes    InspectorNote[] @relation("InspectorNotes")
   receivedNotes   InspectorNote[] @relation("StudentNotes")
 
+  // 🔴 تتبع تقدم الدروس للمستخدم
+  lessonProgress LessonProgress[]
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   lastLoginAt       DateTime?
@@ -205,6 +208,9 @@ model Course {
   inspectors     User[]           @relation("CourseInspectors")
   inspectorNotes InspectorNote[]
 
+  // 🔴 تتبع تقدم الدروس داخل الكورس
+  lessonProgress LessonProgress[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -254,6 +260,9 @@ model Lesson {
   isPublished   Boolean       @default(true)
 
   attachments   String?
+
+  // 🔴 تتبع التقدم الخاص بهذا الدرس
+  progress      LessonProgress[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -451,4 +460,26 @@ model Package {
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+//////////////////////////////////////////////////////
+// 🔴 جدول تقدم الدروس (Lesson Progress) 🔴
+//////////////////////////////////////////////////////
+
+model LessonProgress {
+  id        String   @id @default(uuid())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  watchedAt DateTime @default(now())
+
+  @@unique([userId, lessonId])
+  @@index([userId, courseId])
 }
