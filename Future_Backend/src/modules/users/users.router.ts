@@ -91,33 +91,66 @@ router.patch('/profile', authenticate, [
   } catch (err) { next(err); }
 });
 
-// ==================== CHANGE PASSWORD ====================
-router.patch('/password', authenticate, [
-  body('currentPassword').notEmpty(),
+// ==================== CHANGE PASSWORD (للمستخدم نفسه) ====================
+router.put('/change-password', authenticate, [
+  body('currentPassword').notEmpty().withMessage('يرجى إدخال كلمة المرور الحالية'),
   body('newPassword')
     .isLength({ min: 8 })
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
-    .withMessage('Password must be 8+ chars with uppercase, lowercase, number and special char'),
+    .withMessage('كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل وتحتوي على حرف كبير وصغير ورقم ورمز'),
 ], handleValidation, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
-    if (!user) throw new NotFoundError();
+    if (!user) throw new NotFoundError('المستخدم غير موجود');
 
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);
-    if (!valid) throw new AppError(400, 'Current password is incorrect');
+    if (!valid) throw new AppError(400, 'كلمة المرور الحالية غير صحيحة');
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
     await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
 
-    // Revoke all refresh tokens (force re-login on other devices)
+    // مسح الجلسات القديمة لإجبار الأجهزة الأخرى على تسجيل الدخول بالباسورد الجديد
     await prisma.refreshToken.updateMany({
       where: { userId: user.id },
       data: { isRevoked: true },
     });
 
-    sendSuccess(res, null, 'Password changed. Please login again.');
+    sendSuccess(res, null, 'تم تغيير كلمة المرور بنجاح 🔒. يرجى تسجيل الدخول مجدداً.');
   } catch (err) { next(err); }
+});
+
+// ==================== DELETE ACCOUNT (حذف الحساب نهائياً) ====================
+router.delete('/delete-account', authenticate, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.userId;
+    const { password } = req.body; 
+
+    // بنطلب الباسورد للتأكيد عشان محدش يمسح حساب حد بالغلط
+    if (!password) {
+      throw new AppError(400, 'يرجى إدخال كلمة المرور لتأكيد حذف الحساب');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundError('المستخدم غير موجود');
+
+    // التحقق من كلمة المرور للتأكيد
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) throw new AppError(401, 'كلمة المرور غير صحيحة، تم رفض طلب الحذف ⚠️');
+
+    // حذف المستخدم (نظام الـ Cascade في الداتابيز هيمسح كورساته وطلبات سحبه وكل حاجة)
+    await prisma.user.delete({
+      where: { id: userId }
+    });
+
+    // مسح الكوكيز عشان نطرده بره السيستم
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
+
+    sendSuccess(res, null, 'تم حذف الحساب وجميع البيانات المرتبطة به نهائياً 🗑️');
+  } catch (err) { 
+    next(err); 
+  }
 });
 
 // ==================== ADMIN - List All Users ====================
@@ -232,9 +265,7 @@ router.patch('/:userId/role', authenticate, requireManager, [
   } catch (err) { next(err); }
 });
 
-// ==================== 🔴 ADMIN - Delete User (الجديد) ====================
-// DELETE /api/users/:userId
-// ==========================================
+// ==================== 🔴 ADMIN - Delete User ====================
 router.delete('/:userId', authenticate, requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userId } = req.params;

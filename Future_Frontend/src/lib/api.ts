@@ -74,6 +74,24 @@ export const authApi = {
     api.post('/auth/resend-otp', { email }),
   me: () => api.get('/users/me'),
   logout: () => api.post('/auth/logout'),
+  
+  // 🔴 مسارات استعادة كلمة المرور الجديدة
+  forgotPassword: (email: string) => 
+    api.post('/auth/forgot-password', { email }),
+  verifyResetOtp: (email: string, otp: string) => 
+    api.post('/auth/verify-reset-otp', { email, otp }),
+  resetPassword: (data: { email: string; otp: string; newPassword: string }) => 
+    api.post('/auth/reset-password', data),
+};
+
+// ==================== 🔴 USERS & SETTINGS 🔴 ====================
+export const usersApi = {
+  updateProfile: (data: any) => 
+    api.patch('/users/profile', data),
+  changePassword: (data: any) => 
+    api.put('/users/change-password', data),
+  deleteAccount: (data: any) => 
+    api.delete('/users/delete-account', { data }),
 };
 
 // ==================== COURSES ====================

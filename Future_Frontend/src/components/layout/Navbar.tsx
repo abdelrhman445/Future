@@ -9,7 +9,7 @@ import {
 } from '@mui/material';
 import {
   Menu as MenuIcon, Dashboard, Logout,
-  AdminPanelSettings, Language, BookmarkBorder, TrendingUp, CoPresent, School, ManageAccountsRounded, SupportAgentRounded, Assignment, LocalOfferRounded
+  AdminPanelSettings, Language, BookmarkBorder, TrendingUp, CoPresent, School, ManageAccountsRounded, SupportAgentRounded, Assignment, LocalOfferRounded, Settings
 } from '@mui/icons-material';
 import { motion } from 'framer-motion'; 
 import { useAuthStore } from '@/store/auth.store';
@@ -56,6 +56,7 @@ export default function Navbar() {
     manager: ar ? 'لوحة المدير' : 'Manager Panel', 
     inspector: ar ? 'طلبات المحاضرات' : 'Presentations',
     evaluations: ar ? 'تقييم الطلاب' : 'Student Evaluations',
+    settings: ar ? 'إعدادات الحساب' : 'Account Settings', // 🔴 تمت إضافة الترجمة
     logout: ar ? 'تسجيل الخروج' : 'Logout',
     support: ar ? 'خدمة العملاء' : 'Customer Support', 
   };
@@ -217,6 +218,12 @@ export default function Navbar() {
                   )}
 
                   <Divider sx={{ borderColor: palette.cardBg, my: 1 }} />
+                  
+                  {/* 🔴 إضافة "إعدادات الحساب" هنا (Desktop) */}
+                  <MenuItem component={Link} href={`/${locale}/settings`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
+                    <Settings sx={{ mr: 1.5, fontSize: 20, color: palette.textSec }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.settings}</Typography>
+                  </MenuItem>
+
                   <MenuItem onClick={handleLogout} sx={{ py: 1.2, color: palette.danger, '&:hover': {bgcolor: 'rgba(230,47,118,0.1)'} }}>
                     <Logout sx={{ mr: 1.5, fontSize: 20 }} /> <Typography sx={{fontWeight: 700}}>{t.logout}</Typography>
                   </MenuItem>
@@ -390,6 +397,15 @@ export default function Navbar() {
 
                 <Divider sx={{ borderColor: palette.cardBg, my: 3 }} />
                 
+                {/* 🔴 إضافة "إعدادات الحساب" هنا (Mobile) */}
+                <ListItem disablePadding sx={{ mb: 1 }}>
+                  <ListItemButton component={Link} href={`/${locale}/settings`} onClick={() => setMobileOpen(false)}
+                    sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>
+                    <ListItemIcon sx={{ minWidth: 40, color: palette.textSec }}><Settings /></ListItemIcon>
+                    <ListItemText primary={t.settings} primaryTypographyProps={{ fontWeight: 700 }} />
+                  </ListItemButton>
+                </ListItem>
+
                 <ListItem disablePadding>
                   <ListItemButton onClick={() => { setMobileOpen(false); handleLogout(); }}
                     sx={{ borderRadius: 2, color: palette.danger, '&:hover': { background: 'rgba(230,47,118,0.1)' } }}>

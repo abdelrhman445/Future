@@ -295,6 +295,136 @@ router.post('/login', authRateLimiter, loginValidation, handleValidation, async 
   }
 });
 
+// ==========================================
+// 🔴 1. طلب إعادة تعيين كلمة المرور (Forgot Password)
+// ==========================================
+router.post('/forgot-password', authRateLimiter, [body('email').isEmail().normalizeEmail()], handleValidation, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email } = req.body;
+    
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) throw new AppError(404, 'لا يوجد حساب مرتبط بهذا البريد الإلكتروني');
+
+    // إبطال أي OTP قديم خاص باليوزر ده لإعادة التعيين
+    await prisma.otp.updateMany({
+      where: { userId: user.id, type: 'PASSWORD_RESET', isUsed: false },
+      data: { isUsed: true }
+    });
+
+    // توليد كود OTP
+    const otpCode = generateOtpCode();
+    const expiresAt = new Date(Date.now() + config.otp.expiresInMinutes * 60 * 1000);
+
+    // حفظ الـ OTP مشفر في الداتابيز
+    await prisma.otp.create({
+      data: {
+        code: await bcrypt.hash(otpCode, 8),
+        type: 'PASSWORD_RESET',
+        userId: user.id,
+        expiresAt,
+        ipAddress: req.ip,
+      }
+    });
+
+    // استخدام نفس دالة إرسال الإيميل الموجودة لتقليل التكرار (أو يمكنك عمل دالة خاصة لاحقاً)
+    await sendOtpEmail(email, otpCode, user.firstName);
+
+    sendSuccess(res, null, 'تم إرسال كود استعادة كلمة المرور إلى بريدك الإلكتروني 📩');
+  } catch (err) { next(err); }
+});
+
+// ==========================================
+// 🔴 2. التحقق من كود الـ OTP لاستعادة الباسورد
+// ==========================================
+router.post('/verify-reset-otp', otpRateLimiter, otpValidation, handleValidation, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, otp } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) throw new AppError(404, 'المستخدم غير موجود');
+
+    const otpRecord = await prisma.otp.findFirst({
+      where: {
+        userId: user.id,
+        type: 'PASSWORD_RESET',
+        isUsed: false,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!otpRecord) throw new AppError(400, 'كود التحقق غير صحيح أو منتهي الصلاحية');
+
+    // فحص محاولات التخمين
+    if (otpRecord.attempts >= 5) {
+      await prisma.otp.update({ where: { id: otpRecord.id }, data: { isUsed: true } });
+      throw new AppError(429, 'محاولات خاطئة كثيرة. يرجى طلب كود جديد.');
+    }
+
+    const isValid = await bcrypt.compare(otp, otpRecord.code);
+    if (!isValid) {
+      await prisma.otp.update({ where: { id: otpRecord.id }, data: { attempts: { increment: 1 } } });
+      throw new AppError(400, `كود التحقق غير صحيح. متبقي ${4 - otpRecord.attempts} محاولات.`);
+    }
+
+    sendSuccess(res, null, 'كود التحقق صحيح، يمكنك الآن تعيين كلمة مرور جديدة ✅');
+  } catch (err) { next(err); }
+});
+
+// ==========================================
+// 🔴 3. تعيين كلمة المرور الجديدة (Reset Password)
+// ==========================================
+router.post('/reset-password', authRateLimiter, [
+  body('email').isEmail().normalizeEmail(),
+  body('otp').isLength({ min: 6, max: 6 }).isNumeric(),
+  body('newPassword')
+    .isLength({ min: 8 })
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
+    .withMessage('كلمة المرور يجب أن تكون 8 أحرف على الأقل وتحتوي على حرف كبير وصغير ورقم ورمز'),
+], handleValidation, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) throw new AppError(404, 'المستخدم غير موجود');
+
+    const otpRecord = await prisma.otp.findFirst({
+      where: {
+        userId: user.id,
+        type: 'PASSWORD_RESET',
+        isUsed: false,
+        expiresAt: { gt: new Date() } 
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!otpRecord) throw new AppError(400, 'كود التحقق غير صحيح أو منتهي الصلاحية');
+
+    const isValid = await bcrypt.compare(otp, otpRecord.code);
+    if (!isValid) throw new AppError(400, 'كود التحقق غير صحيح');
+
+    // تشفير الباسورد الجديد
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+
+    // تحديث الباسورد وإبطال الـ OTP وخروج من كل الأجهزة
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash }
+      }),
+      prisma.otp.update({
+        where: { id: otpRecord.id },
+        data: { isUsed: true }
+      }),
+      prisma.refreshToken.deleteMany({
+        where: { userId: user.id }
+      })
+    ]);
+
+    sendSuccess(res, null, 'تم إعادة تعيين كلمة المرور بنجاح، يمكنك تسجيل الدخول الآن 🔓');
+  } catch (err) { next(err); }
+});
+
 // ==================== REFRESH TOKEN ====================
 router.post('/refresh', async (req: Request, res: Response, next: NextFunction) => {
   try {

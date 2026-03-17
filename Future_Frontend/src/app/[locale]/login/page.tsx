@@ -149,6 +149,24 @@ export default function LoginPage() {
                 }}
               />
 
+              {/* 🔴 زر نسيت كلمة المرور تم إضافته هنا */}
+              <Box sx={{ width: '100%', textAlign: ar ? 'left' : 'right', mt: -1.5 }}>
+                <Typography 
+                  component={Link} 
+                  href={`/${locale}/forgot-password`} 
+                  sx={{ 
+                    color: palette.textSec, 
+                    fontSize: '0.85rem', 
+                    fontWeight: 600, 
+                    textDecoration: 'none', 
+                    transition: 'all 0.2s',
+                    '&:hover': { color: palette.primaryHover } 
+                  }}
+                >
+                  {ar ? 'نسيت كلمة المرور؟' : 'Forgot Password?'}
+                </Typography>
+              </Box>
+
               <Button type="submit" variant="contained" fullWidth size="large" disabled={loading}
                 sx={{ 
                   py: 1.5, 
