@@ -20,10 +20,16 @@ router.get('/dashboard', authenticate, async (req: Request, res: Response, next:
     const limit = 20;
     const skip = (page - 1) * limit;
 
-    // حساب إجمالي المبيعات التي حققها المسوق (للتأكد من وصوله لـ 300 دولار)
+    // ✅ التعديل الجوهري: حساب المبيعات من جدول userCourse بالاعتماد على التتبع أو الربط المباشر لضمان عدم ظهور 0
     const salesAgg = await prisma.userCourse.aggregate({
       where: {
-        affiliateTracking: { referrerId: userId, status: { in: ['APPROVED', 'PAID'] } }
+        user: {
+          OR: [
+            { referredById: userId }, // الربط المباشر الجديد
+            { referredTracking: { some: { referrerId: userId } } } // الربط عن طريق جدول التتبع (للمستخدمين القدامى)
+          ]
+        },
+        amountPaid: { gt: 0 }
       },
       _sum: { amountPaid: true }
     });
@@ -123,9 +129,16 @@ router.post('/withdraw', authenticate, [
       throw new AppError(400, `Insufficient balance. Available: $${user.pendingEarnings}`);
     }
 
+    // ✅ التعديل: حساب المبيعات بنفس المنطق القوي (OR) لضمان دقة شرط الـ 300 دولار
     const salesAgg = await prisma.userCourse.aggregate({
       where: {
-        affiliateTracking: { referrerId: userId, status: { in: ['APPROVED', 'PAID'] } }
+        user: {
+          OR: [
+            { referredById: userId },
+            { referredTracking: { some: { referrerId: userId } } }
+          ]
+        },
+        amountPaid: { gt: 0 }
       },
       _sum: { amountPaid: true }
     });

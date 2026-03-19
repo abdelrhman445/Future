@@ -198,6 +198,15 @@ export const adminApi = {
   // 🔴 التعديل اللي كان ناقص لربط المحاضرين
   getInspectors: () => api.get('/users/inspectors'),
   assignCourseInspectors: (courseId: string, data: { inspectorIds: string[] }) => api.post(`/courses/${courseId}/assign-inspectors`, data),
+  // 🔴 الإضافة الجديدة هنا 🔴
+  getAllCertificates: (params?: { search?: string; page?: number; limit?: number }) => 
+    api.get('/certificates/admin/all', { params }),
+
+  issueManualCertificate: (data: { userId: string; courseId: string }) => 
+    api.post('/certificates/admin/issue-manual', data),
+
+  revokeCertificate: (certNumber: string) => 
+    api.delete(`/certificates/admin/${certNumber}`),
 };
 
 // ==================== PRESENTATIONS ====================
@@ -230,7 +239,20 @@ export const inspectorApi = {
   addNote: (data: { studentId: string; courseId: string; note: string }) => api.post('/inspector/notes', data),
   getStudentNotes: (courseId: string, studentId: string) => api.get(`/inspector/notes/${courseId}/${studentId}`),
 };
+
 // ==================== PACKAGE ====================
 export const packagesApi = {
   list: () => api.get('/packages'),
+};
+
+// ==================== CERTIFICATES ====================
+export const certificatesApi = {
+  // دالة جلب كل شهاداتي
+  getMyCertificates: () => api.get('/certificates/my/all'),  
+  
+  // دالة التحقق من شهادة برقمها
+  verifyCertificate: (certNumber: string) => api.get(`/certificates/verify/${certNumber}`),
+  
+  // 🔴 الدالة اللي كانت ناقصة وموقفة الدنيا 🔴
+  issueCertificate: (courseId: string) => api.post('/certificates/issue', { courseId })
 };

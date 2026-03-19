@@ -1,24 +1,26 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import {
   Box, Container, Typography, Grid, Card, List, ListItemButton, ListItemText,
-  CircularProgress, IconButton, alpha, Tooltip, Chip, Slider 
+  CircularProgress, IconButton, alpha, Tooltip, Chip, Slider, Button
 } from '@mui/material';
 import { 
   CheckCircleRounded, RadioButtonUncheckedRounded, 
   PlayCircleOutlineRounded, MenuBookRounded, ShieldRounded,
-  PauseRounded, PlayArrowRounded, VolumeUpRounded, VolumeOffRounded, FullscreenRounded
+  PauseRounded, PlayArrowRounded, VolumeUpRounded, VolumeOffRounded, FullscreenRounded,
+  WorkspacePremiumRounded
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 // 🔴 التعديل هنا: استدعاء مباشر عشان نحافظ على الـ Ref اللي بيقدم ويأخر الفيديو
 import ReactPlayer from 'react-player/youtube';
 
 import Navbar from '@/components/layout/Navbar';
-// 🔴 التعديل الأول: إضافة usersApi هنا
-import { coursesApi, mediaApi, usersApi } from '@/lib/api';
+// 🔴 التعديل الأول: إضافة certificatesApi هنا
+import { coursesApi, mediaApi, usersApi, certificatesApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 
 // ================= THEME PALETTE =================
@@ -45,8 +47,10 @@ const formatTime = (seconds: number) => {
 };
 
 export default function CoursePlayerPage() {
-  const { courseId } = useParams() as { courseId: string };
+  const { courseId, locale } = useParams() as { courseId: string; locale: string };
+  const router = useRouter();
   const { user } = useAuthStore(); 
+  const ar = locale === 'ar';
 
   const [course, setCourse] = useState<any>(null);
   const [sections, setSections] = useState<any[]>([]);
@@ -57,7 +61,10 @@ export default function CoursePlayerPage() {
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [watermarkPos, setWatermarkPos] = useState({ top: '10%', left: '10%' });
   const [isClient, setIsClient] = useState(false); // 🔴 للتأكد إن الكود شغال في المتصفح بس
-  
+
+  // ================= 🎓 CERTIFICATE STATES =================
+  const [claimingCert, setClaimingCert] = useState(false);
+
   // ================= STATES للتحكم في الفيديو =================
   const playerRef = useRef<any>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
@@ -161,6 +168,41 @@ export default function CoursePlayerPage() {
       }
     }
   };
+
+  // ================= 🎓 دالة استلام الشهادة =================
+const handleClaimCertificate = async () => {
+    setClaimingCert(true);
+    try {
+      // 1. نادي على الدالة الجاهزة اللي بتكلم الباك إند (issue)
+      // الباك إند جوه دالة الـ issue هو اللي هيتأكد لو إنت مخلص 100% ولا لأ
+      const res = await certificatesApi.issueCertificate(courseId);
+
+      const certNumber = res.data?.data?.certNumber;
+      toast.success(ar ? '🎉 تم إصدار شهادتك بنجاح!' : '🎉 Certificate issued!');
+
+      // 2. التوجيه لصفحة الشهادة بعد ثانية ونصف
+      setTimeout(() => {
+        router.push(`/${locale}/certificates/${certNumber}`);
+      }, 1500);
+
+    } catch (err: any) {
+      // لو الباك إند رد بإن الشهادة موجودة أصلاً، وديه للصفحة علطول
+      if (err.response?.data?.data?.certNumber) {
+        router.push(`/${locale}/certificates/${err.response.data.data.certNumber}`);
+        return;
+      }
+      
+      // غير كدة يظهر رسالة الخطأ اللي جاية من الباك إند
+      const errorMsg = err.response?.data?.message;
+      toast.error(errorMsg || (ar ? 'فشل إصدار الشهادة' : 'Failed to issue certificate'));
+    } finally {
+      setClaimingCert(false);
+    }
+  };
+  // ================= حساب نسبة الإنجاز =================
+  const totalLessonsCount = sections.reduce((acc, s) => acc + (s.lessons?.length || 0), 0);
+  const isCourseFullyCompleted = completedLessons.length >= totalLessonsCount && totalLessonsCount > 0;
+  const progressPercent = totalLessonsCount > 0 ? Math.round((completedLessons.length / totalLessonsCount) * 100) : 0;
 
   // ================= دوال التحكم في الفيديو =================
   const handlePlayPause = () => setPlaying(!playing);
@@ -362,6 +404,79 @@ export default function CoursePlayerPage() {
                 <Chip label="الدرس الحالي" size="small" sx={{ mb: 2, background: alpha(palette.primary, 0.15), color: palette.primary, fontWeight: 800, border: `1px solid ${alpha(palette.primary, 0.3)}` }} />
                 <Typography variant="h5" sx={{ fontWeight: 900, mb: 1.5, color: '#fff', fontSize: { xs: '1.25rem', md: '1.5rem' } }}>{activeLesson?.title || "اختر درساً للبدء"}</Typography>
                 <Typography sx={{ color: palette.textSec, lineHeight: 1.8, fontSize: { xs: '0.9rem', md: '1rem' } }}>{activeLesson?.description || "لا يوجد وصف لهذا الدرس."}</Typography>
+
+                {/* ================= 🎓 زرار الشهادة ================= */}
+                {isCourseFullyCompleted && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ duration: 0.4, ease: 'easeOut' }}
+                    style={{ marginTop: '24px' }}
+                  >
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      onClick={handleClaimCertificate}
+                      disabled={claimingCert}
+                      startIcon={claimingCert
+                        ? <CircularProgress size={20} sx={{ color: '#000' }} />
+                        : <WorkspacePremiumRounded />
+                      }
+                      sx={{
+                        background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`,
+                        color: '#000',
+                        fontWeight: 900,
+                        py: 2,
+                        borderRadius: 3,
+                        fontSize: { xs: '1rem', md: '1.1rem' },
+                        boxShadow: `0 10px 30px ${alpha(palette.primary, 0.4)}`,
+                        transition: 'all 0.3s',
+                        '&:hover': {
+                          background: palette.primaryHover,
+                          boxShadow: `0 14px 40px ${alpha(palette.primary, 0.6)}`,
+                          transform: 'translateY(-2px)',
+                        },
+                        '&:disabled': {
+                          background: alpha(palette.primary, 0.4),
+                          color: 'rgba(0,0,0,0.5)',
+                        }
+                      }}
+                    >
+                      {claimingCert
+                        ? (ar ? 'جاري إصدار الشهادة...' : 'Issuing certificate...')
+                        : (ar ? '🎉 استلم شهادتك الآن' : '🎉 Claim Your Certificate Now')
+                      }
+                    </Button>
+                  </motion.div>
+                )}
+
+                {/* شريط progress مرئي */}
+                {totalLessonsCount > 0 && !isCourseFullyCompleted && (
+                  <Box sx={{ mt: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Typography sx={{ color: palette.textSec, fontSize: '0.8rem', fontWeight: 600 }}>
+                        {ar ? 'تقدمك في الكورس' : 'Course Progress'}
+                      </Typography>
+                      <Typography sx={{ color: palette.primary, fontSize: '0.8rem', fontWeight: 900 }}>
+                        {completedLessons.length} / {totalLessonsCount} ({progressPercent}%)
+                      </Typography>
+                    </Box>
+                    <Box sx={{ height: 6, borderRadius: 3, background: alpha(palette.primary, 0.15), overflow: 'hidden' }}>
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progressPercent}%` }}
+                        transition={{ duration: 0.6, ease: 'easeOut' }}
+                        style={{
+                          height: '100%',
+                          background: `linear-gradient(90deg, ${palette.primary}, ${palette.border})`,
+                          borderRadius: 3,
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                )}
+                {/* ================= END زرار الشهادة ================= */}
+
               </Box>
             </Card>
           </Grid>
@@ -381,6 +496,30 @@ export default function CoursePlayerPage() {
                 <Typography sx={{ fontWeight: 900, fontSize: '1.2rem', color: '#fff', display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <MenuBookRounded sx={{ color: palette.primary }} /> محتوى الكورس
                 </Typography>
+                {/* progress mini في الـ sidebar */}
+                {totalLessonsCount > 0 && (
+                  <Box sx={{ mt: 1.5 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Typography sx={{ color: palette.textSec, fontSize: '0.72rem' }}>
+                        {completedLessons.length}/{totalLessonsCount} {ar ? 'درس' : 'lessons'}
+                      </Typography>
+                      <Typography sx={{ color: isCourseFullyCompleted ? palette.success : palette.primary, fontSize: '0.72rem', fontWeight: 700 }}>
+                        {isCourseFullyCompleted ? (ar ? '✅ مكتمل' : '✅ Complete') : `${progressPercent}%`}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ height: 4, borderRadius: 2, background: alpha(palette.primary, 0.15), overflow: 'hidden' }}>
+                      <Box sx={{
+                        height: '100%',
+                        width: `${progressPercent}%`,
+                        background: isCourseFullyCompleted
+                          ? `linear-gradient(90deg, ${palette.success}, #22d3ee)`
+                          : `linear-gradient(90deg, ${palette.primary}, ${palette.border})`,
+                        borderRadius: 2,
+                        transition: 'width 0.4s ease-out',
+                      }} />
+                    </Box>
+                  </Box>
+                )}
               </Box>
               <Box sx={{ flexGrow: 1, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-track': { background: 'transparent' }, '&::-webkit-scrollbar-thumb': { background: 'rgba(37,154,203,0.3)', borderRadius: '10px' }, '&::-webkit-scrollbar-thumb:hover': { background: palette.primary } }}>
                 {sections.map((section: any, sIndex: number) => (

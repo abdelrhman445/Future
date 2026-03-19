@@ -8,7 +8,11 @@ import {
   DialogActions, FormControl, InputLabel, Select, MenuItem, Switch, 
   FormControlLabel, TableContainer, TextField, Tooltip, Checkbox, ListItemText, OutlinedInput, alpha
 } from '@mui/material';
-import { Edit, Delete, Add, Refresh, FactCheck, Security, InventoryRounded, SchoolRounded, LocalOfferRounded } from '@mui/icons-material';
+import { 
+  Edit, Delete, Add, Refresh, FactCheck, Security, 
+  InventoryRounded, SchoolRounded, LocalOfferRounded,
+  WorkspacePremiumRounded, Visibility, Search 
+} from '@mui/icons-material';
 import Navbar from '@/components/layout/Navbar';
 import { adminApi, coursesApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
@@ -46,7 +50,15 @@ export default function AdminPage() {
   const [packages, setPackages] = useState<any[]>([]); 
   const [loading, setLoading] = useState(true);
 
-  // ---------- 🔴 Delete States (الجديد) ----------
+  // ---------- 🎓 Certificates States (New Addition) ----------
+  const [certs, setCerts] = useState<any[]>([]);
+  const [certSearch, setCertSearch] = useState('');
+  const [issueCertOpen, setIssueCertOpen] = useState(false);
+  const [revokeCertOpen, setRevokeCertOpen] = useState(false);
+  const [selectedCert, setSelectedCert] = useState<any>(null);
+  const [manualCertForm, setManualCertForm] = useState({ userId: '', courseId: '' });
+
+  // ---------- 🔴 Delete States ----------
   const [deleteUserDialogOpen, setDeleteUserDialogOpen] = useState(false);
   const [deletePackageDialogOpen, setDeletePackageDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -138,6 +150,12 @@ export default function AdminPage() {
           const pkgRes = await (adminApi as any).getPackages?.();
           if(pkgRes) setPackages(pkgRes.data?.data || pkgRes.data || []);
         } catch (err) {}
+
+        // Fetch Certificates (New Logic)
+        try {
+          const certRes = await (adminApi as any).getAllCertificates({ search: certSearch });
+          setCerts(certRes.data?.data?.certs || []);
+        } catch (err) {}
       }
 
     } catch (err) {
@@ -149,7 +167,37 @@ export default function AdminPage() {
 
   // ============================== HANDLERS ==============================
 
-  // --- 🔴 User Deletion Logic ---
+  // --- 🎓 Certificates Handlers ---
+  const handleIssueManualCert = async () => {
+    if (!manualCertForm.userId || !manualCertForm.courseId) {
+      toast.error(ar ? 'يرجى اختيار الطالب والكورس' : 'Please select student and course');
+      return;
+    }
+    setLoading(true);
+    try {
+      await (adminApi as any).issueManualCertificate(manualCertForm);
+      toast.success(ar ? 'تم إصدار الشهادة وتحديث حالة الطالب بنجاح' : 'Certificate issued successfully');
+      setIssueCertOpen(false);
+      fetchAll();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Error');
+    } finally { setLoading(false); }
+  };
+
+  const handleRevokeCert = async () => {
+    if (!selectedCert) return;
+    setIsDeleting(true);
+    try {
+      await (adminApi as any).revokeCertificate(selectedCert.certNumber);
+      toast.success(ar ? 'تم إلغاء الشهادة بنجاح' : 'Certificate revoked');
+      setRevokeCertOpen(false);
+      fetchAll();
+    } catch (err: any) {
+      toast.error(ar ? 'فشل الإلغاء' : 'Failed to revoke');
+    } finally { setIsDeleting(false); }
+  };
+
+  // --- User Deletion Logic ---
   const handleOpenDeleteUser = (u: any) => {
     if (u.role === 'ADMIN') {
       toast.error(ar ? 'لا يمكن حذف حساب المسؤول الرئيسي' : 'Cannot delete Super Admin');
@@ -339,7 +387,6 @@ export default function AdminPage() {
     setPackageDialogOpen(true);
   };
 
-  // --- 🔴 Package Deletion Logic ---
   const handleOpenDeletePackage = (pkg: any) => {
     setSelectedPackage(pkg);
     setDeletePackageDialogOpen(true);
@@ -420,6 +467,7 @@ export default function AdminPage() {
           {user?.role === 'ADMIN' && <Tab label={ar ? 'المعاملات المالية' : 'Transactions'} />}
           {user?.role === 'ADMIN' && <Tab label={ar ? 'طلبات السحب' : 'Withdrawals'} />}
           {user?.role === 'ADMIN' && <Tab label={ar ? 'إدارة الباقات' : 'Packages'} />}
+          {user?.role === 'ADMIN' && <Tab label={ar ? 'إدارة الشهادات ' : 'Certificates'} />}
         </Tabs>
 
         {loading ? (
@@ -512,34 +560,20 @@ export default function AdminPage() {
                               {c.inspectors && c.inspectors.length > 0 ? (
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, justifyContent: 'center' }}>
                                   {c.inspectors.map((insp: any) => (
-                                    <Chip 
-                                      key={insp.id} 
-                                      label={`${insp.firstName} ${insp.lastName}`} 
-                                      size="small" 
-                                      sx={{ bgcolor: 'rgba(48,192,242,0.1)', color: palette.primary, border: `1px solid ${palette.primary}`, fontWeight: 'bold' }} 
-                                    />
+                                    <Chip key={insp.id} label={`${insp.firstName} ${insp.lastName}`} size="small" sx={{ bgcolor: 'rgba(48,192,242,0.1)', color: palette.primary, border: `1px solid ${palette.primary}`, fontWeight: 'bold' }} />
                                   ))}
                                 </Box>
                               ) : (
-                                <Typography sx={{ color: palette.textSec, fontSize: '0.85rem', fontStyle: 'italic' }}>
-                                  {ar ? 'لم يتم التحديد' : 'Not assigned'}
-                                </Typography>
+                                <Typography sx={{ color: palette.textSec, fontSize: '0.85rem', fontStyle: 'italic' }}>{ar ? 'لم يتم التحديد' : 'Not assigned'}</Typography>
                               )}
                             </TableCell>
                             <TableCell>
-                              <Chip label={c.status} size="small" sx={{ 
-                                background: c.status === "PUBLISHED" ? 'rgba(34,197,94,0.2)' : c.status === "DRAFT" ? 'rgba(161,161,170,0.2)' : c.status === "HIDDEN" ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)', 
-                                color: c.status === "PUBLISHED" ? palette.success : c.status === "DRAFT" ? '#a1a1aa' : c.status === "HIDDEN" ? palette.danger : palette.warning, fontWeight: 'bold'
-                              }} />
+                              <Chip label={c.status} size="small" sx={{ background: c.status === "PUBLISHED" ? 'rgba(34,197,94,0.2)' : 'rgba(245,158,11,0.2)', color: c.status === "PUBLISHED" ? palette.success : palette.warning, fontWeight: 'bold' }} />
                             </TableCell>
                             <TableCell align="center">
-                              {c.status === "DRAFT" && (
-                                <Button size="small" variant="outlined" onClick={() => publishCourse(c.id)} sx={{ borderColor: palette.success, color: palette.success, mr: 1 }}>
-                                  {ar ? 'نشر' : 'Publish'}
-                                </Button>
-                              )}
-                              <IconButton onClick={() => handleOpenEditCourse(c)} sx={{ color: palette.primary, '&:hover': { background: 'rgba(48,192,242,0.1)' } }}><Edit /></IconButton>
-                              <IconButton onClick={() => handleDeleteClick(c)} sx={{ color: palette.danger, '&:hover': { background: 'rgba(230,47,118,0.1)' } }}><Delete /></IconButton>
+                              {c.status === "DRAFT" && <Button size="small" variant="outlined" onClick={() => publishCourse(c.id)} sx={{ borderColor: palette.success, color: palette.success, mr: 1 }}>{ar ? 'نشر' : 'Publish'}</Button>}
+                              <IconButton onClick={() => handleOpenEditCourse(c)} sx={{ color: palette.primary }}><Edit /></IconButton>
+                              <IconButton onClick={() => handleDeleteClick(c)} sx={{ color: palette.danger }}><Delete /></IconButton>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -565,7 +599,7 @@ export default function AdminPage() {
                     </TableHead>
                     <TableBody>
                       {transactions.map((tx: any) => (
-                        <TableRow key={tx.id} sx={{ '& td': { borderBottom: '1px solid rgba(37, 154, 203, 0.2)' }, '&:hover': { background: 'rgba(255,255,255,0.03)' } }}>
+                        <TableRow key={tx.id} sx={{ '& td': { borderBottom: '1px solid rgba(37, 154, 203, 0.2)' } }}>
                           <TableCell sx={{ color: '#fff' }}>{tx.user?.firstName} {tx.user?.lastName}</TableCell>
                           <TableCell sx={{ color: palette.textSec }}>{tx.course?.title}</TableCell>
                           <TableCell sx={{ color: palette.success, fontWeight: 'bold' }}>${tx.amountPaid}</TableCell>
@@ -585,43 +619,20 @@ export default function AdminPage() {
                   <Table sx={{ minWidth: 800 }}>
                     <TableHead>
                       <TableRow sx={{ '& th': { color: palette.textMain, borderBottom: `1px solid ${palette.border}`, fontWeight: 'bold' } }}>
-                        <TableCell>{ar ? 'المسوق (User)' : 'Affiliate'}</TableCell>
+                        <TableCell>{ar ? 'المسوق' : 'Affiliate'}</TableCell>
                         <TableCell>{ar ? 'المبلغ' : 'Amount'}</TableCell>
-                        <TableCell>{ar ? 'وسيلة الدفع' : 'Method'}</TableCell>
-                        <TableCell>{ar ? 'تفاصيل الحساب' : 'Account Details'}</TableCell>
                         <TableCell>{ar ? 'الحالة' : 'Status'}</TableCell>
-                        <TableCell>{ar ? 'التاريخ' : 'Date'}</TableCell>
                         <TableCell align="center">{ar ? 'مراجعة' : 'Review'}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {withdrawals.map((w: any) => (
-                        <TableRow key={w.id} sx={{ '& td': { borderBottom: '1px solid rgba(37, 154, 203, 0.2)' }, '&:hover': { background: 'rgba(255,255,255,0.03)' } }}>
-                          <TableCell sx={{ color: '#fff' }}>
-                            {w.user?.firstName} {w.user?.lastName} <br/>
-                            <span style={{ fontSize: '0.8rem', color: palette.textSec }}>{w.user?.email}</span>
-                          </TableCell>
-                          <TableCell sx={{ color: palette.primary, fontWeight: 'bold', fontSize: '1.1rem' }}>${w.amount}</TableCell>
-                          <TableCell sx={{ color: palette.textSec, textTransform: 'capitalize' }}>{w.method.replace('_', ' ')}</TableCell>
-                          <TableCell sx={{ color: palette.textSec, fontFamily: 'monospace' }}>{w.accountDetails}</TableCell>
-                          <TableCell>
-                             <Chip 
-                               label={w.status} 
-                               size="small" 
-                               sx={{ 
-                                 background: w.status === 'COMPLETED' ? 'rgba(34,197,94,0.2)' : w.status === 'REJECTED' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)', 
-                                 color: w.status === 'COMPLETED' ? palette.success : w.status === 'REJECTED' ? palette.danger : palette.warning, 
-                                 fontWeight: 'bold' 
-                               }} 
-                             />
-                          </TableCell>
-                          <TableCell sx={{ color: palette.textSec }}>{dayjs(w.createdAt).format('DD/MM/YYYY')}</TableCell>
+                        <TableRow key={w.id} sx={{ '& td': { borderBottom: '1px solid rgba(37, 154, 203, 0.2)' } }}>
+                          <TableCell sx={{ color: '#fff' }}>{w.user?.firstName} {w.user?.lastName}</TableCell>
+                          <TableCell sx={{ color: palette.primary, fontWeight: 'bold' }}>${w.amount}</TableCell>
+                          <TableCell><Chip label={w.status} size="small" sx={{ background: w.status === 'COMPLETED' ? 'rgba(34,197,94,0.2)' : 'rgba(245,158,11,0.2)', color: w.status === 'COMPLETED' ? palette.success : palette.warning }} /></TableCell>
                           <TableCell align="center">
-                            <Tooltip title={ar ? "مراجعة واتخاذ قرار" : "Review & Decide"}>
-                              <IconButton onClick={() => handleOpenReviewWithdrawal(w)} sx={{ color: palette.primary, '&:hover': { background: 'rgba(48,192,242,0.1)' } }}>
-                                <FactCheck />
-                              </IconButton>
-                            </Tooltip>
+                            <IconButton onClick={() => handleOpenReviewWithdrawal(w)} sx={{ color: palette.primary }}><FactCheck /></IconButton>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -634,40 +645,87 @@ export default function AdminPage() {
             {/* 5. PACKAGES TAB */}
             {user?.role === 'ADMIN' && tab === 4 && (
               <Box>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mb: 2 }}>
-                  <Button variant="contained" startIcon={<Add />} onClick={handleOpenAddPackage} sx={{ background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, color: '#000', fontWeight: 'bold' }}>
-                    {ar ? 'إنشاء باقة جديدة' : 'Create Package'}
-                  </Button>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                  <Button variant="contained" startIcon={<Add />} onClick={handleOpenAddPackage} sx={{ background: palette.primary, color: '#000', fontWeight: 'bold' }}>{ar ? 'إنشاء باقة' : 'Create Package'}</Button>
                 </Box>
-                <Card sx={{ p: { xs: 1, sm: 2 }, background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+                <Card sx={{ p: 2, background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
                   <TableContainer>
-                    <Table sx={{ minWidth: 600 }}>
+                    <Table>
                       <TableHead>
                         <TableRow sx={{ '& th': { color: palette.textMain, borderBottom: `1px solid ${palette.border}`, fontWeight: 'bold' } }}>
-                          <TableCell>{ar ? 'صورة الباقة' : 'Image'}</TableCell>
-                          <TableCell>{ar ? 'اسم الباقة' : 'Package Name'}</TableCell>
-                          <TableCell>{ar ? 'عدد الكورسات' : 'Courses Count'}</TableCell>
+                          <TableCell>{ar ? 'اسم الباقة' : 'Name'}</TableCell>
                           <TableCell>{ar ? 'السعر' : 'Price'}</TableCell>
                           <TableCell align="center">{ar ? 'إجراءات' : 'Actions'}</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {packages.map((pkg: any) => (
-                          <TableRow key={pkg.id} sx={{ '& td': { borderBottom: '1px solid rgba(37, 154, 203, 0.2)' }, '&:hover': { background: 'rgba(255,255,255,0.03)' } }}>
-                            <TableCell>
-                              <Box component="img" src={pkg.thumbnailUrl || '/placeholder.png'} sx={{ width: 50, height: 50, borderRadius: 1, objectFit: 'cover' }} />
+                          <TableRow key={pkg.id} sx={{ '& td': { borderBottom: '1px solid rgba(37, 154, 203, 0.2)' } }}>
+                            <TableCell sx={{ color: '#fff' }}>{pkg.name}</TableCell>
+                            <TableCell sx={{ color: palette.success }}>${pkg.price}</TableCell>
+                            <TableCell align="center">
+                              <IconButton onClick={() => handleOpenEditPackage(pkg)} sx={{ color: palette.primary }}><Edit /></IconButton>
+                              <IconButton onClick={() => handleOpenDeletePackage(pkg)} sx={{ color: palette.danger }}><Delete /></IconButton>
                             </TableCell>
-                            <TableCell sx={{ color: '#fff', fontWeight: 600 }}>{pkg.name}</TableCell>
-                            <TableCell sx={{ color: palette.textSec }}>{pkg.coursesCount}</TableCell>
-                            <TableCell sx={{ color: palette.success, fontWeight: 'bold' }}>${pkg.price}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Card>
+              </Box>
+            )}
+
+            {/* 🎓 6. CERTIFICATES TAB (New Section) */}
+            {user?.role === 'ADMIN' && tab === 5 && (
+              <Box>
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 3 }}>
+                   <Box sx={{ display: 'flex', gap: 2, width: { xs: '100%', md: '400px' } }}>
+                     <TextField 
+                        placeholder={ar ? 'ابحث برقم الشهادة أو اسم الطالب...' : 'Search by cert # or name...'}
+                        fullWidth size="small" value={certSearch} onChange={(e) => setCertSearch(e.target.value)}
+                        InputProps={{ startAdornment: <Search sx={{ color: palette.textSec, mr: 1 }} />, sx: { color: '#fff', bgcolor: 'rgba(0,0,0,0.2)' } }}
+                     />
+                     <Button variant="contained" onClick={fetchAll} sx={{ bgcolor: palette.cardBg, border: `1px solid ${palette.border}`, color: '#fff' }}>
+                       <Refresh />
+                     </Button>
+                   </Box>
+                   <Button variant="contained" startIcon={<WorkspacePremiumRounded />} onClick={() => setIssueCertOpen(true)}
+                     sx={{ background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, color: '#000', fontWeight: 900, px: 3 }}>
+                     {ar ? 'إصدار شهادة يدوياً' : 'Issue Manual Certificate'}
+                   </Button>
+                </Box>
+
+                <Card sx={{ p: 2, background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
+                  <TableContainer>
+                    <Table sx={{ minWidth: 800 }}>
+                      <TableHead>
+                        <TableRow sx={{ '& th': { color: palette.textMain, borderBottom: `1px solid ${palette.border}`, fontWeight: 'bold' } }}>
+                          <TableCell>{ar ? 'رقم الشهادة' : 'Cert Number'}</TableCell>
+                          <TableCell>{ar ? 'الطالب' : 'Student'}</TableCell>
+                          <TableCell>{ar ? 'الكورس' : 'Course'}</TableCell>
+                          <TableCell>{ar ? 'تاريخ الإصدار' : 'Issued At'}</TableCell>
+                          <TableCell align="center">{ar ? 'إجراءات' : 'Actions'}</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {certs.map((c: any) => (
+                          <TableRow key={c.certNumber} sx={{ '& td': { borderBottom: '1px solid rgba(37, 154, 203, 0.2)' }, '&:hover': { background: 'rgba(255,255,255,0.03)' } }}>
+                            <TableCell sx={{ color: palette.primary, fontWeight: 'bold', fontFamily: 'monospace' }}>{c.certNumber}</TableCell>
+                            <TableCell sx={{ color: '#fff' }}>
+                              {c.user?.firstName} {c.user?.lastName} <br/>
+                              <span style={{ fontSize: '0.75rem', color: palette.textSec }}>{c.user?.email}</span>
+                            </TableCell>
+                            <TableCell sx={{ color: palette.textSec }}>{c.course?.title}</TableCell>
+                            <TableCell sx={{ color: palette.textSec }}>{dayjs(c.issuedAt).format('DD/MM/YYYY')}</TableCell>
                             <TableCell align="center">
                               <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                                <IconButton onClick={() => handleOpenEditPackage(pkg)} sx={{ color: palette.primary, '&:hover': { background: 'rgba(48,192,242,0.1)' } }}>
-                                  <Edit />
-                                </IconButton>
-                                <IconButton onClick={() => handleOpenDeletePackage(pkg)} sx={{ color: palette.danger, '&:hover': { background: 'rgba(230,47,118,0.1)' } }}>
-                                  <Delete />
-                                </IconButton>
+                                <Tooltip title={ar ? 'معاينة' : 'View'}>
+                                  <IconButton onClick={() => router.push(`/${locale}/certificates/${c.certNumber}`)} sx={{ color: palette.success }}><Visibility /></IconButton>
+                                </Tooltip>
+                                <Tooltip title={ar ? 'إلغاء الشهادة' : 'Revoke'}>
+                                  <IconButton onClick={() => { setSelectedCert(c); setRevokeCertOpen(true); }} sx={{ color: palette.danger }}><Delete /></IconButton>
+                                </Tooltip>
                               </Box>
                             </TableCell>
                           </TableRow>
@@ -684,7 +742,47 @@ export default function AdminPage() {
 
       {/* ============================== DIALOGS ============================== */}
 
-      {/* 🔴 Confirm Delete User Dialog */}
+      {/* 🎓 1. Issue Manual Certificate Dialog */}
+      <Dialog open={issueCertOpen} onClose={() => setIssueCertOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `1px solid ${palette.primary}`, borderRadius: 4, minWidth: 400 } }}>
+        <DialogTitle sx={{ color: palette.primary, fontWeight: 900 }}>{ar ? '🎓 إصدار شهادة يدوياً' : '🎓 Issue Manual Certificate'}</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
+          <FormControl fullWidth sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}>
+            <InputLabel sx={{ color: palette.textSec }}>{ar ? 'اختر الطالب' : 'Select Student'}</InputLabel>
+            <Select value={manualCertForm.userId} label={ar ? 'اختر الطالب' : 'Select Student'} onChange={(e) => setManualCertForm({ ...manualCertForm, userId: e.target.value })} sx={{ color: '#fff' }}>
+              {users.map(u => <MenuItem key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.email})</MenuItem>)}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}>
+            <InputLabel sx={{ color: palette.textSec }}>{ar ? 'اختر الكورس' : 'Select Course'}</InputLabel>
+            <Select value={manualCertForm.courseId} label={ar ? 'اختر الكورس' : 'Select Course'} onChange={(e) => setManualCertForm({ ...manualCertForm, courseId: e.target.value })} sx={{ color: '#fff' }}>
+              {courses.map(c => <MenuItem key={c.id} value={c.id}>{c.title}</MenuItem>)}
+            </Select>
+          </FormControl>
+          <Typography variant="caption" sx={{ color: palette.warning }}>* ملاحظة: سيتم تحويل حالة الطالب في هذا الكورس إلى "مكتمل" تلقائياً عند الإصدار.</Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setIssueCertOpen(false)} sx={{ color: palette.textSec }}>{ar ? 'إلغاء' : 'Cancel'}</Button>
+          <Button onClick={handleIssueManualCert} variant="contained" sx={{ bgcolor: palette.primary, color: '#000', fontWeight: 900 }}>{ar ? 'إصدار الآن' : 'Issue Now'}</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 🎓 2. Revoke Certificate Dialog */}
+      <Dialog open={revokeCertOpen} onClose={() => setRevokeCertOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `2px solid ${palette.danger}`, borderRadius: 4 } }}>
+        <DialogTitle sx={{ color: palette.danger, fontWeight: 900 }}>{ar ? '⚠️ إلغاء شهادة؟' : '⚠️ Revoke Certificate?'}</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: '#fff' }}>{ar ? 'هل أنت متأكد من إلغاء وحذف هذه الشهادة؟ لن يتمكن الطالب من رؤيتها مرة أخرى.' : 'Are you sure you want to delete this certificate permanently?'}</Typography>
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 2, border: `1px dashed ${palette.danger}` }}>
+            <Typography sx={{ color: palette.primary, fontWeight: 800 }}>{selectedCert?.certNumber}</Typography>
+            <Typography sx={{ color: '#fff' }}>{selectedCert?.user?.firstName} {selectedCert?.user?.lastName}</Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setRevokeCertOpen(false)} sx={{ color: palette.textSec }}>{ar ? 'تراجع' : 'Cancel'}</Button>
+          <Button onClick={handleRevokeCert} variant="contained" sx={{ bgcolor: palette.danger, fontWeight: 900 }}>{ar ? 'نعم، إلغاء' : 'Yes, Revoke'}</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 🔴 Original Delete User Dialog */}
       <Dialog open={deleteUserDialogOpen} onClose={() => setDeleteUserDialogOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `2px solid ${palette.danger}`, borderRadius: 4, minWidth: 350 } }}>
         <DialogTitle sx={{ color: palette.danger, fontWeight: 900 }}>{ar ? '⚠️ حذف مستخدم نهائياً؟' : '⚠️ Delete User Permanently?'}</DialogTitle>
         <DialogContent>
@@ -702,7 +800,7 @@ export default function AdminPage() {
         </DialogActions>
       </Dialog>
 
-      {/* 🔴 Confirm Delete Package Dialog */}
+      {/* 🔴 Original Delete Package Dialog */}
       <Dialog open={deletePackageDialogOpen} onClose={() => setDeletePackageDialogOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `2px solid ${palette.danger}`, borderRadius: 4, minWidth: 350 } }}>
         <DialogTitle sx={{ color: palette.danger, fontWeight: 900 }}>{ar ? '🗑️ حذف الباقة التعليمية؟' : '🗑️ Delete Educational Package?'}</DialogTitle>
         <DialogContent>
@@ -717,7 +815,7 @@ export default function AdminPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Edit User Dialog */}
+      {/* Original Edit User Dialog */}
       <Dialog open={editUserOpen} onClose={() => setEditUserOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3, minWidth: { xs: '90%', sm: 400 } } }}>
         <DialogTitle sx={{ fontWeight: 700, color: palette.textMain, borderBottom: `1px solid rgba(37,154,203,0.3)` }}>{ar ? 'تعديل المستخدم' : 'Edit User'}</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
@@ -743,7 +841,7 @@ export default function AdminPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Add/Edit Course Dialog */}
+      {/* Original Add/Edit Course Dialog */}
       <Dialog open={courseDialogOpen} onClose={() => setCourseDialogOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3, minWidth: { xs: '90%', sm: 450 } } }}>
         <DialogTitle sx={{ fontWeight: 700, color: palette.textMain, borderBottom: `1px solid rgba(37,154,203,0.3)` }}>{selectedCourse ? (ar ? 'تعديل الكورس' : 'Edit Course') : (ar ? 'إضافة كورس جديد' : 'Add New Course')}</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
@@ -800,7 +898,7 @@ export default function AdminPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Delete Course Dialog */}
+      {/* Original Delete Course Dialog */}
       <Dialog open={deleteCourseDialogOpen} onClose={() => setDeleteCourseDialogOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `1px solid ${palette.danger}`, borderRadius: 3, minWidth: { xs: '90%', sm: 350 } } }}>
         <DialogTitle sx={{ fontWeight: 700, color: palette.danger }}>{ar ? 'تأكيد الحذف' : 'Confirm Delete'}</DialogTitle>
         <DialogContent>
@@ -815,7 +913,7 @@ export default function AdminPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Review Withdrawal Dialog */}
+      {/* Original Review Withdrawal Dialog */}
       <Dialog open={reviewWithdrawalOpen} onClose={() => setReviewWithdrawalOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3, minWidth: { xs: '90%', sm: 450 } } }}>
         <DialogTitle sx={{ fontWeight: 800, color: palette.textMain, borderBottom: `1px solid rgba(37,154,203,0.3)`, pb: 2 }}>
           {ar ? 'مراجعة طلب السحب' : 'Review Withdrawal'}
@@ -849,7 +947,7 @@ export default function AdminPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Add/Edit Package Dialog */}
+      {/* Original Add/Edit Package Dialog */}
       <Dialog open={packageDialogOpen} onClose={() => setPackageDialogOpen(false)} PaperProps={{ sx: { background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3, minWidth: { xs: '90%', sm: 400 } } }}>
         <DialogTitle sx={{ fontWeight: 700, color: palette.textMain, borderBottom: `1px solid rgba(37,154,203,0.3)` }}>
           {selectedPackage ? (ar ? 'تعديل الباقة' : 'Edit Package') : (ar ? 'إنشاء باقة جديدة' : 'Create New Package')}
@@ -864,7 +962,6 @@ export default function AdminPage() {
               onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })}
               sx={{ color: '#fff' }}
             >
-              {/* 🔴 إضافة اختيار ALL لفتح كل الكورسات */}
               <MenuItem value="ALL">{ar ? 'فتح كل الكورسات (ALL)' : 'ALL Courses'}</MenuItem>
               <MenuItem value="BASIC">Basic</MenuItem>
               <MenuItem value="STANDARD">Standard</MenuItem>

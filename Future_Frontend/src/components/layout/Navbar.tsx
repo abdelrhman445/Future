@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import Link from 'next/link'; // 🟢 تم التصحيح هنا
 import Image from 'next/image';
 import { useParams, useRouter, usePathname } from 'next/navigation';
 import {
@@ -9,7 +9,8 @@ import {
 } from '@mui/material';
 import {
   Menu as MenuIcon, Dashboard, Logout,
-  AdminPanelSettings, Language, BookmarkBorder, TrendingUp, CoPresent, School, ManageAccountsRounded, SupportAgentRounded, Assignment, LocalOfferRounded, Settings
+  AdminPanelSettings, Language, BookmarkBorder, TrendingUp, CoPresent, School, ManageAccountsRounded, SupportAgentRounded, Assignment, LocalOfferRounded, Settings,
+  WorkspacePremium
 } from '@mui/icons-material';
 import { motion } from 'framer-motion'; 
 import { useAuthStore } from '@/store/auth.store';
@@ -26,7 +27,7 @@ const palette = {
   textMain: '#a8eff9',
   textSec: '#a0ddf1',
   danger: '#e62f76',
-  accent: '#f59e0b', // 🔴 لون مميز للباقات
+  accent: '#f59e0b',
 };
 
 export default function Navbar() {
@@ -39,7 +40,6 @@ export default function Navbar() {
   const [mounted, setMounted] = useState(false);
   const ar = locale === 'ar';
 
-  // Wait for client hydration before showing auth state
   useEffect(() => { setMounted(true); }, []);
 
   const t = {
@@ -47,7 +47,8 @@ export default function Navbar() {
     allCourses: ar ? 'الكورسات' : 'Courses',
     packages: ar ? 'الباقات' : 'Packages', 
     myCourses: ar ? 'الكورسات' : 'Courses', 
-    myPackages: ar ? 'باقاتي' : 'My Packages', // 🔴 الترجمة الجديدة
+    myPackages: ar ? 'باقاتي' : 'My Packages',
+    myCertificates: ar ? 'شهاداتي' : 'My Certificates',
     login: ar ? 'دخول' : 'Login',
     register: ar ? 'إنشاء حساب' : 'Register',
     dashboard: ar ? 'لوحتي' : 'Dashboard',
@@ -56,7 +57,7 @@ export default function Navbar() {
     manager: ar ? 'لوحة المدير' : 'Manager Panel', 
     inspector: ar ? 'طلبات المحاضرات' : 'Presentations',
     evaluations: ar ? 'تقييم الطلاب' : 'Student Evaluations',
-    settings: ar ? 'إعدادات الحساب' : 'Account Settings', // 🔴 تمت إضافة الترجمة
+    settings: ar ? 'إعدادات الحساب' : 'Account Settings',
     logout: ar ? 'تسجيل الخروج' : 'Logout',
     support: ar ? 'خدمة العملاء' : 'Customer Support', 
   };
@@ -71,7 +72,6 @@ export default function Navbar() {
 
   const isActive = (href: string) => pathname === href;
 
-  // Role Checks
   const hasAffiliate = mounted && isAuthenticated && user?.affiliateCode;
   const isAdmin = mounted && isAuthenticated && user?.role === 'ADMIN'; 
   const isManager = mounted && isAuthenticated && user?.role === 'MANAGER'; 
@@ -89,7 +89,6 @@ export default function Navbar() {
         sx={{ background: 'rgba(10,10,15,0.97)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${palette.cardBg}` }}>
         <Toolbar sx={{ justifyContent: 'space-between', maxWidth: 1280, width: '100%', mx: 'auto', px: { xs: 2, md: 3 }, py: 0.5 }}>
 
-          {/* Logo & Brand Name */}
           <Link href={`/${locale}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
             <Box component={motion.div} whileHover={{ scale: 1.05 }} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Image src="/logo.png" alt="Future Logo" width={38} height={38} style={{ objectFit: 'contain' }} priority />
@@ -99,7 +98,6 @@ export default function Navbar() {
             </Typography>
           </Link>
 
-          {/* Desktop Nav */}
           <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 4, alignItems: 'center' }}>
             {(
               mounted && isAuthenticated
@@ -149,7 +147,6 @@ export default function Navbar() {
               {t.support}
             </Button>
 
-            {/* Language Toggle */}
             <IconButton
               onClick={() => router.push(pathname.replace(`/${locale}`, locale === 'ar' ? '/en' : '/ar'))}
               sx={{ color: palette.textSec, border: `1px solid ${palette.border}`, borderRadius: 2, px: 1.5, mx: 2, gap: 0.5, '&:hover': {borderColor: palette.primary, color: palette.primary} }} size="small">
@@ -157,7 +154,6 @@ export default function Navbar() {
               <Typography sx={{ fontSize: 12, fontWeight: 700 }}>{locale === 'ar' ? 'EN' : 'عر'}</Typography>
             </IconButton>
 
-            {/* Auth Section */}
             {!mounted ? (
               <Box sx={{ width: 150 }} />
             ) : isAuthenticated && user ? (
@@ -183,7 +179,6 @@ export default function Navbar() {
                     <School sx={{ mr: 1.5, fontSize: 20, color: palette.textMain }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.myCourses}</Typography>
                   </MenuItem>
 
-                  {/* 🔴 إضافة "باقاتي" هنا للمسجلين دخول (Desktop) */}
                   <MenuItem component={Link} href={`/${locale}/my-packages`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
                     <LocalOfferRounded sx={{ mr: 1.5, fontSize: 20, color: palette.accent }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.myPackages}</Typography>
                   </MenuItem>
@@ -219,7 +214,10 @@ export default function Navbar() {
 
                   <Divider sx={{ borderColor: palette.cardBg, my: 1 }} />
                   
-                  {/* 🔴 إضافة "إعدادات الحساب" هنا (Desktop) */}
+                  <MenuItem component={Link} href={`/${locale}/my-certificates`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
+                    <WorkspacePremium sx={{ mr: 1.5, fontSize: 20, color: palette.primary }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.myCertificates}</Typography>
+                  </MenuItem>
+
                   <MenuItem component={Link} href={`/${locale}/settings`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
                     <Settings sx={{ mr: 1.5, fontSize: 20, color: palette.textSec }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.settings}</Typography>
                   </MenuItem>
@@ -261,13 +259,11 @@ export default function Navbar() {
             )}
           </Box>
 
-          {/* Mobile Menu Button */}
           <IconButton sx={{ display: { md: 'none' }, color: palette.primary }} onClick={() => setMobileOpen(true)}>
             <MenuIcon fontSize="large" />
           </IconButton>
         </Toolbar>
 
-        {/* Mobile Drawer */}
         <Drawer anchor="left" open={mobileOpen} onClose={() => setMobileOpen(false)}
           PaperProps={{ sx: { background: palette.bg, width: 300, borderRight: `1px solid ${palette.cardBg}` } }}>
 
@@ -294,14 +290,12 @@ export default function Navbar() {
                     <ListItemText primary={t.home} primaryTypographyProps={{ fontWeight: isActive(`/${locale}`) ? 800 : 600, fontSize: '1.1rem' }} />
                   </ListItemButton>
                 </ListItem>
-                
                 <ListItem disablePadding sx={{ mb: 1 }}>
                   <ListItemButton component={Link} href={`/${locale}/courses`} onClick={() => setMobileOpen(false)}
                     sx={{ borderRadius: 2, color: isActive(`/${locale}/courses`) ? palette.primary : palette.textSec, '&:hover': { background: palette.cardBg, color: palette.textMain } }}>
                     <ListItemText primary={t.allCourses} primaryTypographyProps={{ fontWeight: isActive(`/${locale}/courses`) ? 800 : 600, fontSize: '1.1rem' }} />
                   </ListItemButton>
                 </ListItem>
-
                 <ListItem disablePadding sx={{ mb: 1 }}>
                   <ListItemButton component={Link} href={`/${locale}/packages`} onClick={() => setMobileOpen(false)}
                     sx={{ borderRadius: 2, color: isActive(`/${locale}/packages`) ? palette.primary : palette.textSec, '&:hover': { background: palette.cardBg, color: palette.textMain } }}>
@@ -337,7 +331,6 @@ export default function Navbar() {
                   </ListItemButton>
                 </ListItem>
 
-                {/* 🔴 إضافة "باقاتي" هنا للمسجلين دخول (Mobile) */}
                 <ListItem disablePadding sx={{ mb: 1 }}>
                   <ListItemButton component={Link} href={`/${locale}/my-packages`} onClick={() => setMobileOpen(false)}
                     sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>
@@ -397,7 +390,14 @@ export default function Navbar() {
 
                 <Divider sx={{ borderColor: palette.cardBg, my: 3 }} />
                 
-                {/* 🔴 إضافة "إعدادات الحساب" هنا (Mobile) */}
+                <ListItem disablePadding sx={{ mb: 1 }}>
+                  <ListItemButton component={Link} href={`/${locale}/my-certificates`} onClick={() => setMobileOpen(false)}
+                    sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>
+                    <ListItemIcon sx={{ minWidth: 40, color: palette.primary }}><WorkspacePremium /></ListItemIcon>
+                    <ListItemText primary={t.myCertificates} primaryTypographyProps={{ fontWeight: 700 }} />
+                  </ListItemButton>
+                </ListItem>
+
                 <ListItem disablePadding sx={{ mb: 1 }}>
                   <ListItemButton component={Link} href={`/${locale}/settings`} onClick={() => setMobileOpen(false)}
                     sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>

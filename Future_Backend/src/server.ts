@@ -9,6 +9,7 @@ import { setupSecurity } from './core/security';
 import { sanitizeInput, requestId, globalErrorHandler, notFoundHandler } from './core/middlewares';
 import inspectorRouter from './modules/inspector/inspector.router';
 import packagesRouter from './modules/packages/packages.router';
+import certificatesRouter from './modules/certificates/certificates.router';
 
 // Module Routers
 import authRouter from './modules/auth/auth.router';
@@ -70,6 +71,7 @@ app.use(`${API_PREFIX}/media`, mediaRouter);
 app.use(`${API_PREFIX}/payments`, paymentsRouter);
 app.use('/api/inspector', inspectorRouter);
 app.use('/api/packages', packagesRouter);
+app.use('/api/certificates', certificatesRouter);
 // ==================== 404 & ERROR HANDLERS ====================
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
