@@ -267,11 +267,27 @@ router.get('/verify/:certNumber', async (req: Request, res: Response, next: Next
       where: { certNumber: req.params.certNumber },
       include: {
         user:   { select: { firstName: true, lastName: true } },
-        course: { select: { title: true, duration: true } }
+        course: { 
+          select: { 
+            title: true, 
+            duration: true,
+            // 🔴 التعديل هنا: بنجيب الانسبكتور المربوط بالكورس
+            inspectors: { 
+              select: { firstName: true, lastName: true },
+              take: 1 // هنجيب أول انسبكتور لو الكورس فيه أكتر من واحد
+            }
+          } 
+        }
       }
     });
 
     if (!cert) throw new NotFoundError('الشهادة غير موجودة');
+
+    // 🔴 تجميع اسم الانسبكتور لو الكورس ليه انسبكتور
+    let inspectorFullName = undefined;
+    if (cert.course.inspectors && cert.course.inspectors.length > 0) {
+      inspectorFullName = `${cert.course.inspectors[0].firstName} ${cert.course.inspectors[0].lastName}`;
+    }
 
     sendSuccess(res, {
       certNumber:  cert.certNumber,
@@ -280,11 +296,11 @@ router.get('/verify/:certNumber', async (req: Request, res: Response, next: Next
       duration:    cert.course.duration,
       issuedAt:    cert.issuedAt,
       isValid:     true,
+      inspectorName: inspectorFullName // 🔴 بنبعت الاسم للفرونت إند هنا
     });
 
   } catch (err) { next(err); }
 });
-
 // ══════════════════════════════════════════════════════════
 // 7. ADMIN — حذف/إلغاء شهادة + إعادة حالة الكورس للطلاب
 // ══════════════════════════════════════════════════════════
