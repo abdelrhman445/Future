@@ -2,8 +2,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Box, Container, Grid, Card, CardContent, CardMedia, Chip, Typography, TextField, InputAdornment, ToggleButton, ToggleButtonGroup, alpha } from '@mui/material';
-import { Search, PlayCircle, AccessTime, MenuBook, AutoAwesomeRounded } from '@mui/icons-material';
+import { Box, Container, Grid, Card, CardContent, CardMedia, Chip, Typography, TextField, InputAdornment, ToggleButton, ToggleButtonGroup, Button, CircularProgress } from '@mui/material';
+import { Search, PlayCircle, AccessTime, MenuBook, AutoAwesomeRounded, ExpandMore } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import { coursesApi } from '@/lib/api';
@@ -37,19 +37,50 @@ const PACKAGES = ['ALL', 'BASIC', 'STANDARD', 'PREMIUM', 'ENTERPRISE'];
 export default function CoursesPage() {
   const { locale } = useParams() as { locale: string };
   const ar = locale === 'ar';
+  
+  // 🔴 States جديدة للـ Pagination
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState('');
   const [pkg, setPkg] = useState('ALL');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const limit = 12; // عدد الكورسات في كل ضغطة
 
+  // جلب البيانات عند تغيير الباقة أو الفلتر (يبدأ من صفحة 1)
   useEffect(() => {
     setLoading(true);
-    const params = pkg !== 'ALL' ? { package: pkg } : {};
+    setPage(1);
+    const params = { limit, page: 1, ...(pkg !== 'ALL' && { package: pkg }) };
+    
     coursesApi.list(params)
-      .then((res) => setCourses(res.data.data.courses))
+      .then((res) => {
+        const fetchedCourses = res.data.data.courses;
+        setCourses(fetchedCourses);
+        // لو اللي راجع أقل من الليميت، يبقى مفيش كورسات تاني
+        setHasMore(fetchedCourses.length === limit);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [pkg]);
+
+  // دالة زرار "عرض المزيد"
+  const handleLoadMore = () => {
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    const params = { limit, page: nextPage, ...(pkg !== 'ALL' && { package: pkg }) };
+    
+    coursesApi.list(params)
+      .then((res) => {
+        const newCourses = res.data.data.courses;
+        setCourses(prev => [...prev, ...newCourses]);
+        setPage(nextPage);
+        setHasMore(newCourses.length === limit);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingMore(false));
+  };
 
   const filtered = courses.filter((c) =>
     c.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -78,7 +109,7 @@ export default function CoursesPage() {
             </Typography>
           </Box>
           <Typography sx={{ color: palette.textSec, mb: 4, fontSize: '1.1rem', fontWeight: 600, ml: 6 }}>
-            {ar ? `استكشف ${courses.length} كورس متاح وابدأ رحلتك` : `Explore ${courses.length} available courses and start learning`}
+            {ar ? `استكشف الكورسات المتاحة وابدأ رحلتك` : `Explore available courses and start learning`}
           </Typography>
 
           <TextField
@@ -156,7 +187,7 @@ export default function CoursesPage() {
                   } 
                 }}>
                 
-                {/* 🔴 الجزء الخاص بصورة الكورس والبادج وزرار التشغيل 🔴 */}
+                {/* الجزء الخاص بصورة الكورس والبادج وزرار التشغيل */}
                 <CardMedia component="div"
                   sx={{ 
                     height: 200, 
@@ -165,7 +196,6 @@ export default function CoursesPage() {
                     borderBottom: `1px solid rgba(37,154,203,0.2)`
                   }}>
                   
-                  {/* زرار الـ Play متغلف بطبقة زجاجية عشان يبرز */}
                   <Box sx={{ 
                     width: 64, height: 64, borderRadius: '50%', 
                     background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)', 
@@ -176,7 +206,6 @@ export default function CoursesPage() {
                     <PlayCircle sx={{ fontSize: 40, color: palette.primary }} />
                   </Box>
 
-                  {/* بادج الباقة (تم تنزيله وإضافة ظل) */}
                   <Chip label={course.packageType} size="small"
                     sx={{ 
                       position: 'absolute', top: 20, left: ar ? 'auto' : 20, right: ar ? 20 : 'auto', 
@@ -193,7 +222,6 @@ export default function CoursesPage() {
                     {course.shortDescription || (ar ? 'لا يوجد وصف متاح' : 'No description available')}
                   </Typography>
 
-                  {/* 🔴 التعديل هنا لحل مشكلة الصفر (0) اللي كان بيظهر فجأة 🔴 */}
                   <Box sx={{ display: 'flex', gap: 2, mb: 3, color: palette.textSec, fontSize: '0.85rem', fontWeight: 600 }}>
                     {(course.totalLessons ?? 0) > 0 && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
@@ -239,6 +267,31 @@ export default function CoursesPage() {
             </Grid>
           )}
         </Grid>
+
+        {/* 🔴 زرار عرض المزيد (Load More) 🔴 */}
+        {!loading && hasMore && search === '' && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
+            <Button
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              variant="outlined"
+              endIcon={loadingMore ? <CircularProgress size={20} color="inherit" /> : <ExpandMore />}
+              sx={{
+                gap: 1.5,
+                borderColor: 'rgba(48,192,242,0.3)', color: palette.primary,
+                px: 5, py: 1.5, borderRadius: 8, fontWeight: 800, fontSize: '1rem',
+                transition: 'all 0.3s',
+                '&:hover': {
+                  borderColor: palette.primary,
+                  background: 'rgba(48,192,242,0.1)',
+                  boxShadow: `0 0 20px rgba(48,192,242,0.2)`
+                }
+              }}
+            >
+              {loadingMore ? (ar ? 'جاري التحميل...' : 'Loading...') : (ar ? 'عرض المزيد من الكورسات' : 'Load More Courses')}
+            </Button>
+          </Box>
+        )}
       </Container>
     </Box>
   );
