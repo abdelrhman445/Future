@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import Link from 'next/link'; // 🟢 تم التصحيح هنا
+import Link from 'next/link'; 
 import Image from 'next/image';
 import { useParams, useRouter, usePathname } from 'next/navigation';
 import {
@@ -82,23 +82,29 @@ export default function Navbar() {
       component={motion.div} 
       initial={{ y: -20, opacity: 0 }} 
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
       sx={{ position: 'sticky', top: 0, zIndex: 1100 }}
     >
       <AppBar position="static" elevation={0}
-        sx={{ background: 'rgba(10,10,15,0.97)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${palette.cardBg}` }}>
+        sx={{ 
+          background: 'rgba(10, 10, 15, 0.85)', 
+          backdropFilter: 'blur(20px)', 
+          WebkitBackdropFilter: 'blur(20px)',
+          borderBottom: `1px solid rgba(37, 154, 203, 0.15)`,
+          boxShadow: '0 4px 30px rgba(0, 0, 0, 0.5)'
+        }}>
         <Toolbar sx={{ justifyContent: 'space-between', maxWidth: 1280, width: '100%', mx: 'auto', px: { xs: 2, md: 3 }, py: 0.5 }}>
 
           <Link href={`/${locale}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Box component={motion.div} whileHover={{ scale: 1.05 }} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Box component={motion.div} whileHover={{ scale: 1.05 }} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, filter: 'drop-shadow(0px 0px 8px rgba(48,192,242,0.4))' }}>
               <Image src="/logo.png" alt="Future Logo" width={38} height={38} style={{ objectFit: 'contain' }} priority />
             </Box>
-            <Typography variant="h6" sx={{ fontWeight: 900, fontSize: 22, background: `linear-gradient(135deg, ${palette.primary}, ${palette.textMain})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: 0.5 }}>
+            <Typography variant="h6" sx={{ fontWeight: 900, fontSize: 22, background: `linear-gradient(135deg, ${palette.primary}, #fff)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: 0.5, textShadow: '0 2px 10px rgba(48,192,242,0.2)' }}>
               {ar ? 'فيوتشر أكاديمي' : 'Future Academy'}
             </Typography>
           </Link>
 
-          <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 4, alignItems: 'center' }}>
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 3, alignItems: 'center' }}>
             {(
               mounted && isAuthenticated
                 ? [
@@ -117,11 +123,35 @@ export default function Navbar() {
                 component={Link}
                 href={link.href}
                 sx={{
+                  position: 'relative',
                   color: isActive(link.href) ? palette.primary : palette.textSec,
                   fontWeight: isActive(link.href) ? 800 : 600,
-                  fontSize: '1.05rem',
+                  fontSize: '1rem',
                   letterSpacing: 0.5,
-                  '&:hover': { color: palette.textMain, background: 'rgba(48,192,242,0.05)' }
+                  px: 2,
+                  py: 1,
+                  borderRadius: 2,
+                  transition: 'all 0.3s ease',
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    bottom: 4,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: isActive(link.href) ? '20px' : '0px',
+                    height: '3px',
+                    borderRadius: '2px',
+                    background: palette.primary,
+                    transition: 'width 0.3s ease',
+                    boxShadow: `0 0 8px ${palette.primary}`,
+                  },
+                  '&:hover': { 
+                    color: palette.textMain, 
+                    background: 'rgba(48,192,242,0.05)',
+                  },
+                  '&:hover::after': {
+                    width: '20px'
+                  }
                 }}
               >
                 {link.label}
@@ -135,96 +165,133 @@ export default function Navbar() {
               sx={{
                 color: palette.textSec,
                 fontWeight: 600,
-                fontSize: '1.05rem',
+                fontSize: '1rem',
                 letterSpacing: 0.5,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 0.5,
-                '&:hover': { color: '#25D366', background: 'rgba(37,211,102,0.05)' } 
+                gap: 0.8,
+                px: 2,
+                py: 1,
+                borderRadius: 2,
+                transition: 'all 0.3s',
+                '&:hover': { color: '#25D366', background: 'rgba(37,211,102,0.08)', boxShadow: '0 4px 15px rgba(37,211,102,0.1)' } 
               }}
             >
-              <SupportAgentRounded fontSize="small" />
+              <SupportAgentRounded fontSize="small" sx={{ filter: 'drop-shadow(0 0 5px rgba(37,211,102,0.3))' }} />
               {t.support}
             </Button>
 
             <IconButton
               onClick={() => router.push(pathname.replace(`/${locale}`, locale === 'ar' ? '/en' : '/ar'))}
-              sx={{ color: palette.textSec, border: `1px solid ${palette.border}`, borderRadius: 2, px: 1.5, mx: 2, gap: 0.5, '&:hover': {borderColor: palette.primary, color: palette.primary} }} size="small">
-              <Language sx={{ fontSize: 16 }} />
-              <Typography sx={{ fontSize: 12, fontWeight: 700 }}>{locale === 'ar' ? 'EN' : 'عر'}</Typography>
+              sx={{ 
+                color: palette.textSec, 
+                border: `1px solid rgba(255,255,255,0.1)`, 
+                background: 'rgba(255,255,255,0.02)',
+                borderRadius: '12px', 
+                px: 1.5, 
+                mx: 1, 
+                gap: 0.5, 
+                transition: 'all 0.3s',
+                '&:hover': { borderColor: palette.primary, color: palette.primary, background: 'rgba(48,192,242,0.05)', transform: 'translateY(-2px)', boxShadow: `0 4px 12px rgba(48,192,242,0.15)` } 
+              }} 
+              size="small"
+            >
+              <Language sx={{ fontSize: 18 }} />
+              <Typography sx={{ fontSize: 13, fontWeight: 800 }}>{locale === 'ar' ? 'EN' : 'عربي'}</Typography>
             </IconButton>
 
             {!mounted ? (
               <Box sx={{ width: 150 }} />
             ) : isAuthenticated && user ? (
               <>
-                <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} sx={{ p: 0.5 }}>
-                  <Avatar sx={{ width: 44, height: 44, background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, color: '#000', fontSize: 16, fontWeight: 800, border: `2px solid ${palette.primaryHover}` }}>
+                <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} sx={{ p: 0.5, ml: 1, transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.05)' } }}>
+                  <Avatar sx={{ 
+                    width: 44, height: 44, 
+                    background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, 
+                    color: '#000', fontSize: 16, fontWeight: 900, 
+                    border: `2px solid rgba(255,255,255,0.2)`,
+                    boxShadow: `0 0 15px rgba(48,192,242,0.4)`
+                  }}>
                     {user.firstName?.[0]}{user.lastName?.[0]}
                   </Avatar>
                 </IconButton>
                 <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}
-                  PaperProps={{ sx: { background: palette.bg, border: `1px solid ${palette.border}`, mt: 1.5, minWidth: 230, borderRadius: 3, boxShadow: `0 8px 32px rgba(8,69,112,0.4)` } }}>
+                  transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                  anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                  PaperProps={{ 
+                    sx: { 
+                      background: 'rgba(10, 10, 15, 0.95)', 
+                      backdropFilter: 'blur(20px)',
+                      border: `1px solid rgba(255,255,255,0.1)`, 
+                      mt: 1.5, 
+                      minWidth: 240, 
+                      borderRadius: 4, 
+                      boxShadow: `0 12px 40px rgba(0,0,0,0.6), 0 0 20px rgba(48,192,242,0.1)`,
+                      overflow: 'hidden'
+                    } 
+                  }}>
 
-                  <Box sx={{ px: 2, py: 1.5, borderBottom: `1px solid ${palette.cardBg}` }}>
-                    <Typography sx={{ fontWeight: 800, fontSize: '1rem', color: palette.textMain }}>{user.firstName} {user.lastName}</Typography>
-                    <Typography sx={{ color: palette.textSec, fontSize: '0.8rem' }}>{user.email}</Typography>
+                  <Box sx={{ px: 2.5, py: 2, background: 'rgba(255,255,255,0.02)', borderBottom: `1px solid rgba(255,255,255,0.05)` }}>
+                    <Typography sx={{ fontWeight: 900, fontSize: '1.05rem', color: palette.textMain, letterSpacing: 0.5 }}>{user.firstName} {user.lastName}</Typography>
+                    <Typography sx={{ color: palette.textSec, fontSize: '0.8rem', opacity: 0.8 }}>{user.email}</Typography>
                   </Box>
 
-                  <MenuItem component={Link} href={`/${locale}/dashboard`} onClick={() => setAnchorEl(null)} sx={{ mt: 1, py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
-                    <Dashboard sx={{ mr: 1.5, fontSize: 20, color: palette.primary }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.dashboard}</Typography>
-                  </MenuItem>
-                  
-                  <MenuItem component={Link} href={`/${locale}/my-courses`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
-                    <School sx={{ mr: 1.5, fontSize: 20, color: palette.textMain }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.myCourses}</Typography>
-                  </MenuItem>
-
-                  <MenuItem component={Link} href={`/${locale}/my-packages`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
-                    <LocalOfferRounded sx={{ mr: 1.5, fontSize: 20, color: palette.accent }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.myPackages}</Typography>
-                  </MenuItem>
-
-                  {hasAffiliate && (
-                    <MenuItem component={Link} href={`/${locale}/affiliate`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
-                      <TrendingUp sx={{ mr: 1.5, fontSize: 20, color: '#4ade80' }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.affiliate}</Typography>
+                  <Box sx={{ p: 1 }}>
+                    <MenuItem component={Link} href={`/${locale}/dashboard`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(255,255,255,0.05)', pl: 3} }}>
+                      <Dashboard sx={{ mr: 1.5, fontSize: 20, color: palette.primary }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.dashboard}</Typography>
                     </MenuItem>
-                  )}
+                    
+                    <MenuItem component={Link} href={`/${locale}/my-courses`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(255,255,255,0.05)', pl: 3} }}>
+                      <School sx={{ mr: 1.5, fontSize: 20, color: palette.textMain }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.myCourses}</Typography>
+                    </MenuItem>
 
-                  {isInspector && (
-                    <Box>
-                      <MenuItem component={Link} href={`/${locale}/inspector`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
-                        <CoPresent sx={{ mr: 1.5, fontSize: 20, color: palette.primaryHover }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.inspector}</Typography>
+                    <MenuItem component={Link} href={`/${locale}/my-packages`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(255,255,255,0.05)', pl: 3} }}>
+                      <LocalOfferRounded sx={{ mr: 1.5, fontSize: 20, color: palette.accent }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.myPackages}</Typography>
+                    </MenuItem>
+
+                    {hasAffiliate && (
+                      <MenuItem component={Link} href={`/${locale}/affiliate`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(74,222,128,0.1)', pl: 3} }}>
+                        <TrendingUp sx={{ mr: 1.5, fontSize: 20, color: '#4ade80' }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.affiliate}</Typography>
                       </MenuItem>
-                      <MenuItem component={Link} href={`/${locale}/inspector/evaluations`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
-                        <Assignment sx={{ mr: 1.5, fontSize: 20, color: palette.primaryHover }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.evaluations}</Typography>
+                    )}
+
+                    {isInspector && (
+                      <Box>
+                        <MenuItem component={Link} href={`/${locale}/inspector`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(255,255,255,0.05)', pl: 3} }}>
+                          <CoPresent sx={{ mr: 1.5, fontSize: 20, color: palette.primaryHover }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.inspector}</Typography>
+                        </MenuItem>
+                        <MenuItem component={Link} href={`/${locale}/inspector/evaluations`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(255,255,255,0.05)', pl: 3} }}>
+                          <Assignment sx={{ mr: 1.5, fontSize: 20, color: palette.primaryHover }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.evaluations}</Typography>
+                        </MenuItem>
+                      </Box>
+                    )}
+
+                    {isAdmin && (
+                      <MenuItem component={Link} href={`/${locale}/admin`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(168,85,247,0.1)', pl: 3} }}>
+                        <AdminPanelSettings sx={{ mr: 1.5, fontSize: 20, color: '#a855f7' }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.admin}</Typography>
                       </MenuItem>
-                    </Box>
-                  )}
+                    )}
 
-                  {isAdmin && (
-                    <MenuItem component={Link} href={`/${locale}/admin`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
-                      <AdminPanelSettings sx={{ mr: 1.5, fontSize: 20, color: '#a855f7' }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.admin}</Typography>
+                    {isManager && (
+                      <MenuItem component={Link} href={`/${locale}/manager`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(249,115,22,0.1)', pl: 3} }}>
+                        <ManageAccountsRounded sx={{ mr: 1.5, fontSize: 20, color: '#f97316' }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.manager}</Typography>
+                      </MenuItem>
+                    )}
+
+                    <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)', my: 1 }} />
+                    
+                    <MenuItem component={Link} href={`/${locale}/my-certificates`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(255,255,255,0.05)', pl: 3} }}>
+                      <WorkspacePremium sx={{ mr: 1.5, fontSize: 20, color: palette.primary }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.myCertificates}</Typography>
                     </MenuItem>
-                  )}
 
-                  {isManager && (
-                    <MenuItem component={Link} href={`/${locale}/manager`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
-                      <ManageAccountsRounded sx={{ mr: 1.5, fontSize: 20, color: '#f97316' }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.manager}</Typography>
+                    <MenuItem component={Link} href={`/${locale}/settings`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(255,255,255,0.05)', pl: 3} }}>
+                      <Settings sx={{ mr: 1.5, fontSize: 20, color: palette.textSec }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.settings}</Typography>
                     </MenuItem>
-                  )}
 
-                  <Divider sx={{ borderColor: palette.cardBg, my: 1 }} />
-                  
-                  <MenuItem component={Link} href={`/${locale}/my-certificates`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
-                    <WorkspacePremium sx={{ mr: 1.5, fontSize: 20, color: palette.primary }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.myCertificates}</Typography>
-                  </MenuItem>
-
-                  <MenuItem component={Link} href={`/${locale}/settings`} onClick={() => setAnchorEl(null)} sx={{ py: 1.2, '&:hover': {bgcolor: palette.cardBg} }}>
-                    <Settings sx={{ mr: 1.5, fontSize: 20, color: palette.textSec }} /> <Typography sx={{color: '#fff', fontWeight: 600}}>{t.settings}</Typography>
-                  </MenuItem>
-
-                  <MenuItem onClick={handleLogout} sx={{ py: 1.2, color: palette.danger, '&:hover': {bgcolor: 'rgba(230,47,118,0.1)'} }}>
-                    <Logout sx={{ mr: 1.5, fontSize: 20 }} /> <Typography sx={{fontWeight: 700}}>{t.logout}</Typography>
-                  </MenuItem>
+                    <MenuItem onClick={handleLogout} sx={{ borderRadius: 2, py: 1.2, color: palette.danger, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(230,47,118,0.1)', pl: 3} }}>
+                      <Logout sx={{ mr: 1.5, fontSize: 20 }} /> <Typography sx={{fontWeight: 800, fontSize: '0.95rem'}}>{t.logout}</Typography>
+                    </MenuItem>
+                  </Box>
                 </Menu>
               </>
             ) : (
@@ -233,12 +300,13 @@ export default function Navbar() {
                   sx={{ 
                     px: 3.5, 
                     py: 1, 
-                    borderColor: palette.border, 
-                    color: palette.textMain, 
+                    borderColor: 'rgba(255,255,255,0.2)', 
+                    color: '#fff', 
                     fontWeight: 800, 
-                    fontSize: '1rem', 
-                    borderRadius: 2, 
-                    '&:hover': { borderColor: palette.primary, color: palette.primary, background: 'rgba(48,192,242,0.05)' } 
+                    fontSize: '0.95rem', 
+                    borderRadius: 3, 
+                    transition: 'all 0.3s',
+                    '&:hover': { borderColor: palette.primary, color: palette.primary, background: 'rgba(48,192,242,0.05)', transform: 'translateY(-2px)', boxShadow: `0 4px 15px rgba(48,192,242,0.15)` } 
                   }}>
                   {t.login}
                 </Button>
@@ -248,10 +316,12 @@ export default function Navbar() {
                     py: 1, 
                     background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, 
                     color: '#000', 
-                    fontWeight: 800, 
-                    fontSize: '1rem', 
-                    borderRadius: 2, 
-                    '&:hover': { background: `linear-gradient(135deg, ${palette.primaryHover}, ${palette.primary})` } 
+                    fontWeight: 900, 
+                    fontSize: '0.95rem', 
+                    borderRadius: 3, 
+                    boxShadow: `0 4px 15px rgba(48,192,242,0.3)`,
+                    transition: 'all 0.3s',
+                    '&:hover': { background: `linear-gradient(135deg, ${palette.primaryHover}, ${palette.primary})`, transform: 'translateY(-2px)', boxShadow: `0 6px 20px rgba(48,192,242,0.5)` } 
                   }}>
                   {t.register}
                 </Button>
@@ -264,18 +334,27 @@ export default function Navbar() {
           </IconButton>
         </Toolbar>
 
+        {/* ================= MOBILE DRAWER ================= */}
         <Drawer anchor="left" open={mobileOpen} onClose={() => setMobileOpen(false)}
-          PaperProps={{ sx: { background: palette.bg, width: 300, borderRight: `1px solid ${palette.cardBg}` } }}>
+          PaperProps={{ 
+            sx: { 
+              background: 'rgba(10, 10, 15, 0.95)', 
+              backdropFilter: 'blur(20px)', 
+              width: 320, 
+              borderRight: `1px solid rgba(255,255,255,0.05)`,
+              boxShadow: '20px 0 50px rgba(0,0,0,0.5)'
+            } 
+          }}>
 
           {mounted && isAuthenticated && user && (
-            <Box sx={{ p: 3, background: `linear-gradient(135deg, rgba(48,192,242,0.1), transparent)`, borderBottom: `1px solid ${palette.cardBg}` }}>
+            <Box sx={{ p: 3, background: `linear-gradient(135deg, rgba(48,192,242,0.05), transparent)`, borderBottom: `1px solid rgba(255,255,255,0.05)` }}>
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <Avatar sx={{ width: 50, height: 50, background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, color: '#000', fontWeight: 800, fontSize: '1.2rem' }}>
+                <Avatar sx={{ width: 56, height: 56, background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, color: '#000', fontWeight: 900, fontSize: '1.4rem', boxShadow: `0 0 15px rgba(48,192,242,0.3)` }}>
                   {user.firstName?.[0]}{user.lastName?.[0]}
                 </Avatar>
                 <Box>
-                  <Typography sx={{ fontWeight: 800, color: palette.textMain, fontSize: '1.1rem' }}>{user.firstName} {user.lastName}</Typography>
-                  <Typography sx={{ color: palette.textSec, fontSize: '0.85rem', fontWeight: 600 }}>{user.role}</Typography>
+                  <Typography sx={{ fontWeight: 900, color: palette.textMain, fontSize: '1.15rem', letterSpacing: 0.5 }}>{user.firstName} {user.lastName}</Typography>
+                  <Typography sx={{ color: palette.textSec, fontSize: '0.85rem', fontWeight: 600, opacity: 0.8 }}>{user.role}</Typography>
                 </Box>
               </Box>
             </Box>
@@ -286,20 +365,20 @@ export default function Navbar() {
               <>
                 <ListItem disablePadding sx={{ mb: 1 }}>
                   <ListItemButton component={Link} href={`/${locale}`} onClick={() => setMobileOpen(false)}
-                    sx={{ borderRadius: 2, color: isActive(`/${locale}`) ? palette.primary : palette.textSec, '&:hover': { background: palette.cardBg, color: palette.textMain } }}>
-                    <ListItemText primary={t.home} primaryTypographyProps={{ fontWeight: isActive(`/${locale}`) ? 800 : 600, fontSize: '1.1rem' }} />
+                    sx={{ borderRadius: 3, color: isActive(`/${locale}`) ? palette.primary : '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
+                    <ListItemText primary={t.home} primaryTypographyProps={{ fontWeight: isActive(`/${locale}`) ? 900 : 600, fontSize: '1.05rem' }} />
                   </ListItemButton>
                 </ListItem>
                 <ListItem disablePadding sx={{ mb: 1 }}>
                   <ListItemButton component={Link} href={`/${locale}/courses`} onClick={() => setMobileOpen(false)}
-                    sx={{ borderRadius: 2, color: isActive(`/${locale}/courses`) ? palette.primary : palette.textSec, '&:hover': { background: palette.cardBg, color: palette.textMain } }}>
-                    <ListItemText primary={t.allCourses} primaryTypographyProps={{ fontWeight: isActive(`/${locale}/courses`) ? 800 : 600, fontSize: '1.1rem' }} />
+                    sx={{ borderRadius: 3, color: isActive(`/${locale}/courses`) ? palette.primary : '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
+                    <ListItemText primary={t.allCourses} primaryTypographyProps={{ fontWeight: isActive(`/${locale}/courses`) ? 900 : 600, fontSize: '1.05rem' }} />
                   </ListItemButton>
                 </ListItem>
                 <ListItem disablePadding sx={{ mb: 1 }}>
                   <ListItemButton component={Link} href={`/${locale}/packages`} onClick={() => setMobileOpen(false)}
-                    sx={{ borderRadius: 2, color: isActive(`/${locale}/packages`) ? palette.primary : palette.textSec, '&:hover': { background: palette.cardBg, color: palette.textMain } }}>
-                    <ListItemText primary={t.packages} primaryTypographyProps={{ fontWeight: isActive(`/${locale}/packages`) ? 800 : 600, fontSize: '1.1rem' }} />
+                    sx={{ borderRadius: 3, color: isActive(`/${locale}/packages`) ? palette.primary : '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
+                    <ListItemText primary={t.packages} primaryTypographyProps={{ fontWeight: isActive(`/${locale}/packages`) ? 900 : 600, fontSize: '1.05rem' }} />
                   </ListItemButton>
                 </ListItem>
               </>
@@ -307,44 +386,46 @@ export default function Navbar() {
 
             <ListItem disablePadding sx={{ mb: 1 }}>
               <ListItemButton component="a" href="https://wa.me/201155242794" target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)}
-                sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: 'rgba(37,211,102,0.1)' } }}>
+                sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(37,211,102,0.1)', pl: 3 } }}>
                 <ListItemIcon sx={{ minWidth: 40, color: '#25D366' }}><SupportAgentRounded /></ListItemIcon>
-                <ListItemText primary={t.support} primaryTypographyProps={{ fontWeight: 700 }} />
+                <ListItemText primary={t.support} primaryTypographyProps={{ fontWeight: 800, fontSize: '1.05rem' }} />
               </ListItemButton>
             </ListItem>
 
             {mounted && isAuthenticated && user ? (
               <>
+                <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)', my: 2 }} />
+                
                 <ListItem disablePadding sx={{ mb: 1 }}>
                   <ListItemButton component={Link} href={`/${locale}/dashboard`} onClick={() => setMobileOpen(false)}
-                    sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>
+                    sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
                     <ListItemIcon sx={{ minWidth: 40, color: palette.primary }}><Dashboard /></ListItemIcon>
-                    <ListItemText primary={t.dashboard} primaryTypographyProps={{ fontWeight: 700 }} />
+                    <ListItemText primary={t.dashboard} primaryTypographyProps={{ fontWeight: 800, fontSize: '1.05rem' }} />
                   </ListItemButton>
                 </ListItem>
 
                 <ListItem disablePadding sx={{ mb: 1 }}>
                   <ListItemButton component={Link} href={`/${locale}/my-courses`} onClick={() => setMobileOpen(false)}
-                    sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>
+                    sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
                     <ListItemIcon sx={{ minWidth: 40, color: palette.textMain }}><School /></ListItemIcon>
-                    <ListItemText primary={t.myCourses} primaryTypographyProps={{ fontWeight: 700 }} />
+                    <ListItemText primary={t.myCourses} primaryTypographyProps={{ fontWeight: 800, fontSize: '1.05rem' }} />
                   </ListItemButton>
                 </ListItem>
 
                 <ListItem disablePadding sx={{ mb: 1 }}>
                   <ListItemButton component={Link} href={`/${locale}/my-packages`} onClick={() => setMobileOpen(false)}
-                    sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>
+                    sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
                     <ListItemIcon sx={{ minWidth: 40, color: palette.accent }}><LocalOfferRounded /></ListItemIcon>
-                    <ListItemText primary={t.myPackages} primaryTypographyProps={{ fontWeight: 700 }} />
+                    <ListItemText primary={t.myPackages} primaryTypographyProps={{ fontWeight: 800, fontSize: '1.05rem' }} />
                   </ListItemButton>
                 </ListItem>
                 
                 {hasAffiliate && (
                   <ListItem disablePadding sx={{ mb: 1 }}>
                     <ListItemButton component={Link} href={`/${locale}/affiliate`} onClick={() => setMobileOpen(false)}
-                      sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>
+                      sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(74,222,128,0.1)', pl: 3 } }}>
                       <ListItemIcon sx={{ minWidth: 40, color: '#4ade80' }}><TrendingUp /></ListItemIcon>
-                      <ListItemText primary={t.affiliate} primaryTypographyProps={{ fontWeight: 700 }} />
+                      <ListItemText primary={t.affiliate} primaryTypographyProps={{ fontWeight: 800, fontSize: '1.05rem' }} />
                     </ListItemButton>
                   </ListItem>
                 )}
@@ -353,16 +434,16 @@ export default function Navbar() {
                   <>
                     <ListItem disablePadding sx={{ mb: 1 }}>
                       <ListItemButton component={Link} href={`/${locale}/inspector`} onClick={() => setMobileOpen(false)}
-                        sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>
+                        sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
                         <ListItemIcon sx={{ minWidth: 40, color: palette.primaryHover }}><CoPresent /></ListItemIcon>
-                        <ListItemText primary={t.inspector} primaryTypographyProps={{ fontWeight: 700 }} />
+                        <ListItemText primary={t.inspector} primaryTypographyProps={{ fontWeight: 800, fontSize: '1.05rem' }} />
                       </ListItemButton>
                     </ListItem>
                     <ListItem disablePadding sx={{ mb: 1 }}>
                       <ListItemButton component={Link} href={`/${locale}/inspector/evaluations`} onClick={() => setMobileOpen(false)}
-                        sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>
+                        sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
                         <ListItemIcon sx={{ minWidth: 40, color: palette.primaryHover }}><Assignment /></ListItemIcon>
-                        <ListItemText primary={t.evaluations} primaryTypographyProps={{ fontWeight: 700 }} />
+                        <ListItemText primary={t.evaluations} primaryTypographyProps={{ fontWeight: 800, fontSize: '1.05rem' }} />
                       </ListItemButton>
                     </ListItem>
                   </>
@@ -371,9 +452,9 @@ export default function Navbar() {
                 {isAdmin && (
                   <ListItem disablePadding sx={{ mb: 1 }}>
                     <ListItemButton component={Link} href={`/${locale}/admin`} onClick={() => setMobileOpen(false)}
-                      sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>
+                      sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(168,85,247,0.1)', pl: 3 } }}>
                       <ListItemIcon sx={{ minWidth: 40, color: '#a855f7' }}><AdminPanelSettings /></ListItemIcon>
-                      <ListItemText primary={t.admin} primaryTypographyProps={{ fontWeight: 700 }} />
+                      <ListItemText primary={t.admin} primaryTypographyProps={{ fontWeight: 800, fontSize: '1.05rem' }} />
                     </ListItemButton>
                   </ListItem>
                 )}
@@ -381,48 +462,48 @@ export default function Navbar() {
                 {isManager && (
                   <ListItem disablePadding sx={{ mb: 1 }}>
                     <ListItemButton component={Link} href={`/${locale}/manager`} onClick={() => setMobileOpen(false)}
-                      sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>
+                      sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(249,115,22,0.1)', pl: 3 } }}>
                       <ListItemIcon sx={{ minWidth: 40, color: '#f97316' }}><ManageAccountsRounded /></ListItemIcon>
-                      <ListItemText primary={t.manager} primaryTypographyProps={{ fontWeight: 700 }} />
+                      <ListItemText primary={t.manager} primaryTypographyProps={{ fontWeight: 800, fontSize: '1.05rem' }} />
                     </ListItemButton>
                   </ListItem>
                 )}
 
-                <Divider sx={{ borderColor: palette.cardBg, my: 3 }} />
+                <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)', my: 2 }} />
                 
                 <ListItem disablePadding sx={{ mb: 1 }}>
                   <ListItemButton component={Link} href={`/${locale}/my-certificates`} onClick={() => setMobileOpen(false)}
-                    sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>
+                    sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
                     <ListItemIcon sx={{ minWidth: 40, color: palette.primary }}><WorkspacePremium /></ListItemIcon>
-                    <ListItemText primary={t.myCertificates} primaryTypographyProps={{ fontWeight: 700 }} />
+                    <ListItemText primary={t.myCertificates} primaryTypographyProps={{ fontWeight: 800, fontSize: '1.05rem' }} />
                   </ListItemButton>
                 </ListItem>
 
                 <ListItem disablePadding sx={{ mb: 1 }}>
                   <ListItemButton component={Link} href={`/${locale}/settings`} onClick={() => setMobileOpen(false)}
-                    sx={{ borderRadius: 2, color: '#fff', '&:hover': { background: palette.cardBg } }}>
+                    sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
                     <ListItemIcon sx={{ minWidth: 40, color: palette.textSec }}><Settings /></ListItemIcon>
-                    <ListItemText primary={t.settings} primaryTypographyProps={{ fontWeight: 700 }} />
+                    <ListItemText primary={t.settings} primaryTypographyProps={{ fontWeight: 800, fontSize: '1.05rem' }} />
                   </ListItemButton>
                 </ListItem>
 
                 <ListItem disablePadding>
                   <ListItemButton onClick={() => { setMobileOpen(false); handleLogout(); }}
-                    sx={{ borderRadius: 2, color: palette.danger, '&:hover': { background: 'rgba(230,47,118,0.1)' } }}>
+                    sx={{ borderRadius: 3, color: palette.danger, transition: 'all 0.2s', '&:hover': { background: 'rgba(230,47,118,0.1)', pl: 3 } }}>
                     <ListItemIcon sx={{ minWidth: 40, color: palette.danger }}><Logout /></ListItemIcon>
-                    <ListItemText primary={t.logout} primaryTypographyProps={{ fontWeight: 800 }} />
+                    <ListItemText primary={t.logout} primaryTypographyProps={{ fontWeight: 900, fontSize: '1.05rem' }} />
                   </ListItemButton>
                 </ListItem>
               </>
             ) : mounted && (
-              <Box sx={{ mt: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ mt: 4, display: 'flex', flexDirection: 'column', gap: 2, px: 1 }}>
                 <Button component={Link} href={`/${locale}/login`} variant="outlined" fullWidth
-                  sx={{ py: 1.5, borderRadius: 2, borderColor: palette.border, color: palette.textMain, fontWeight: 800, fontSize: '1.05rem' }} 
+                  sx={{ py: 1.5, borderRadius: 3, borderColor: 'rgba(255,255,255,0.2)', color: '#fff', fontWeight: 900, fontSize: '1.05rem', transition: 'all 0.3s', '&:hover': { borderColor: palette.primary, color: palette.primary, background: 'rgba(48,192,242,0.05)' } }} 
                   onClick={() => setMobileOpen(false)}>
                   {t.login}
                 </Button>
                 <Button component={Link} href={`/${locale}/register`} variant="contained" fullWidth 
-                  sx={{ background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, color: '#000', fontWeight: 800, py: 1.5, borderRadius: 2, fontSize: '1.05rem' }} 
+                  sx={{ background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, color: '#000', fontWeight: 900, py: 1.5, borderRadius: 3, fontSize: '1.05rem', boxShadow: `0 4px 15px rgba(48,192,242,0.3)`, transition: 'all 0.3s', '&:hover': { background: `linear-gradient(135deg, ${palette.primaryHover}, ${palette.primary})`, boxShadow: `0 6px 20px rgba(48,192,242,0.5)` } }} 
                   onClick={() => setMobileOpen(false)}>
                   {t.register}
                 </Button>

@@ -1,7 +1,7 @@
 'use client';
 // ══════════════════════════════════════════════════════════
 // الملف: src/app/[locale]/certificates/[certNumber]/page.tsx
-// صفحة عرض الشهادة + تحميل PDF (بنسخة احترافية تدعم اللغتين)
+// صفحة عرض الشهادة + تحميل PDF (بنسخة احترافية تدعم الطباعة المثالية)
 // ══════════════════════════════════════════════════════════
 
 import { useEffect, useRef, useState } from 'react';
@@ -28,6 +28,7 @@ interface CertData {
   duration?:   number;
   issuedAt:    string;
   isValid:     boolean;
+  inspectorName?: string; // حقل اسم المفتش/المدرب (إن وجد)
 }
 
 // ── helper: تنسيق التاريخ حسب اللغة ──
@@ -65,14 +66,10 @@ export default function CertificatePage() {
     description: ar 
       ? 'وذلك بعد اجتياز جميع متطلبات الكورس والتفاعل مع كامل محتواه التعليمي بجهد ومثابرة تستحق التقدير والثناء من إدارة الأكاديمية.' 
       : 'Having fulfilled all course requirements and actively engaged with the educational content with commendable dedication and excellence.',
-    signature: ar ? 'التوقيع' : 'Signature',
-    director: ar ? 'المدير التنفيذي' : 'Chief Executive Officer',
     dateLabel: ar ? 'تاريخ الإصدار' : 'Date of Issue',
     certIdLabel: ar ? 'رقم الشهادة: ' : 'Certificate ID: ',
-   // verifyText: ar ? 'يمكن التحقق من صحة هذه الشهادة عبر الرابط:' : 'This certificate can be verified at:',
     printBtn: ar ? 'طباعة' : 'Print',
     downloadBtn: ar ? 'تحميل PDF' : 'Download PDF',
-    //verifiedBadge: ar ? `✅ شهادة موثقة — رقم: ${cert?.certNumber}` : `✅ Verified Certificate — #${cert?.certNumber}`
   };
 
   if (loading) return (
@@ -92,9 +89,56 @@ export default function CertificatePage() {
     <>
       <style>{`
         @media print {
-          .no-print { display: none !important; }
-          body { background: white !important; }
-          .cert-page { background: white !important; padding: 0 !important; }
+          @page {
+            size: A4 landscape; 
+            margin: 0px !important; /* إزالة الهوامش لمحاولة إخفاء الروابط */
+          }
+          * {
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important;
+          }
+          body, html {
+            width: 100vw !important;
+            height: 100vh !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            background: #f4f9fc !important;
+          }
+          .no-print { 
+            display: none !important; 
+          }
+          .cert-page { 
+            background: transparent !important; 
+            padding: 0 !important; 
+            display: flex !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            align-items: center;
+            justify-content: center;
+          }
+          .cert-container {
+            width: 100vw !important; 
+            height: 100vh !important; 
+            box-shadow: none !important; 
+            border-radius: 0 !important;
+            aspect-ratio: auto !important;
+            margin: 0 !important;
+            position: relative !important;
+            max-width: none !important;
+          }
+          /* 🔴 تكبير ورفع الشعار في وضع الطباعة فقط */
+          .cert-seal {
+            width: 140px !important;
+            height: 140px !important;
+            transform: translateY(-25px) !important;
+          }
+          .seal-icon {
+            font-size: 64px !important;
+          }
+          .seal-text {
+            font-size: 0.75rem !important;
+          }
         }
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800;900&family=Playfair+Display:wght@600;800&display=swap');
       `}</style>
@@ -106,7 +150,7 @@ export default function CertificatePage() {
         fontFamily: 'Cairo, sans-serif'
       }}>
 
-        {/* ── Buttons (With fixed precise icon spacing) ── */}
+        {/* ── Buttons (No-Print Area) ── */}
         <Box className="no-print" sx={{ display:'flex', gap: 3, mb: 4, flexWrap:'wrap', justifyContent:'center' }} dir={ar ? 'rtl' : 'ltr'}>
           <Button
             onClick={handlePrint}
@@ -134,9 +178,9 @@ export default function CertificatePage() {
           </Button>
         </Box>
         {/* ══════════════════════════════════════════════════════
-            CERTIFICATE DESIGN (Flexbox Layout)
+            CERTIFICATE DESIGN
         ══════════════════════════════════════════════════════ */}
-        <Box ref={certRef} dir={ar ? 'rtl' : 'ltr'} sx={{
+        <Box className="cert-container" ref={certRef} dir={ar ? 'rtl' : 'ltr'} sx={{
           width: '100%', maxWidth: 1000, aspectRatio: { xs: 'auto', md: '1.414 / 1' },
           background: '#f4f9fc', position: 'relative', overflow: 'hidden',
           display: 'flex', flexDirection: 'column',
@@ -144,7 +188,7 @@ export default function CertificatePage() {
           boxShadow: '0 30px 80px rgba(0,0,0,.6)',
         }}>
 
-          {/* Background Elements (Absolute) */}
+          {/* Background Elements */}
           {[
             { top:16, right:16, borderBottom:'none', borderLeft: ar ? 'none' : `3px solid ${palette.border}`, borderRight: ar ? `3px solid ${palette.border}` : 'none', borderRadius: ar ? '0 12px 0 0' : '12px 0 0 0' },
             { top:16, left:16,  borderBottom:'none', borderRight: ar ? 'none' : `3px solid ${palette.border}`, borderLeft: ar ? `3px solid ${palette.border}` : 'none', borderRadius: ar ? '12px 0 0 0' : '0 12px 0 0' },
@@ -210,22 +254,25 @@ export default function CertificatePage() {
           {/* 3. Footer: Signatures & Seal */}
           <Box sx={{ flex: 1, display:'flex', justifyContent:'space-between', alignItems:'flex-end', zIndex: 2, width: '100%', px: {xs: 0, md: 4} }}>
             
-            {/* Signature */}
+            {/* Signature Block */}
             <Box sx={{ textAlign:'center', flex: 1 }}>
-              <Box sx={{ width:{xs:80,md:130}, height: 1.5, background: palette.border, mb: 1, mx: 'auto' }} />
-              <Typography sx={{ fontSize:{xs:'.65rem',md:'.85rem'}, color: palette.textSec, letterSpacing:'.05em', mb: 0.5 }}>{t.signature}</Typography>
-              <Typography sx={{ fontSize:{xs:'.7rem',md:'.95rem'}, color: palette.cardBg, fontWeight:800 }}>{t.director}</Typography>
+              <Box sx={{ height: {xs: '1.8rem', md: '2.4rem'}, mb: 1 }} /> 
+              <Box sx={{ width:{xs:80,md:130}, height: 1.5, background: palette.border, mb: 1, mx: 'auto' }} /> 
+              <Typography sx={{ fontSize:{xs:'.65rem',md:'.85rem'}, color: palette.textSec, letterSpacing:'.05em', mb: 0.5, fontFamily:'sans-serif' }}>Signature</Typography>
+              <Typography sx={{ fontSize:{xs:'.7rem',md:'.95rem'}, color: palette.cardBg, fontWeight:800 }}>
+                {cert?.inspectorName ? cert.inspectorName : 'Abdelwahap Tamer'}
+              </Typography>
             </Box>
 
-            {/* Premium Seal (LIFTED SLIGHTLY - FIXED SPACING) */}
+            {/* Premium Seal */}
             <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', transform: 'translateY(-5px)', zIndex: 3 }}>
-              <Box sx={{
+              <Box className="cert-seal" sx={{
                 width:{xs:70,md:100}, height:{xs:70,md:100}, borderRadius:'50%', border:`3px solid ${palette.primary}`,
                 display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
                 background:`radial-gradient(circle, #ffffff, #e0f2fe)`, boxShadow:`0 0 0 3px ${palette.border}, inset 0 0 15px rgba(48,192,242,.3)`
               }}>
-                <WorkspacePremiumRounded sx={{ fontSize:{xs:32,md:46}, color: palette.cardBg, mb: 0.5 }} />
-                <Typography sx={{ fontSize:{xs:'.4rem',md:'.55rem'}, color: palette.cardBg, fontWeight:900, letterSpacing:'.05em' }}>
+                <WorkspacePremiumRounded className="seal-icon" sx={{ fontSize:{xs:32,md:46}, color: palette.cardBg, mb: 0.5 }} />
+                <Typography className="seal-text" sx={{ fontSize:{xs:'.4rem',md:'.55rem'}, color: palette.cardBg, fontWeight:900, letterSpacing:'.05em' }}>
                   CERTIFIED
                 </Typography>
               </Box>
@@ -242,14 +289,12 @@ export default function CertificatePage() {
 
           </Box>
 
-          {/* Cert ID (Absolute at the very bottom center) */}
+          {/* Cert ID */}
           <Typography sx={{ position:'absolute', bottom:{xs:18,md:22}, left:'50%', transform:'translateX(-50%)', fontSize:{xs:'.6rem',md:'.75rem'}, color: palette.border, letterSpacing:'.05em', fontWeight: 700, zIndex: 2 }}>
             {t.certIdLabel} <span style={{ fontFamily: 'monospace', fontSize: '1.1em' }}>{cert?.certNumber}</span>
           </Typography>
 
         </Box>
-
-       
 
       </Box>
     </>
