@@ -62,10 +62,35 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const skip = (page - 1) * limit;
     const packageType = req.query.package as string;
 
-    const where = {
+    // 🔴 التعديل السحري: تحويل الـ package لفلتر بحث ذكي شامل عشان يشتغل كـ "مجالات" 
+    const where: any = {
       status: 'PUBLISHED' as any,
-      ...(packageType && { packageType: packageType as never }),
     };
+
+    if (packageType && packageType !== 'ALL') {
+      const isClassicPackage = ['BASIC', 'STANDARD', 'PREMIUM', 'ENTERPRISE'].includes(packageType);
+      
+      if (isClassicPackage) {
+        where.packageType = packageType as never;
+      } else {
+        // كلمات مفتاحية للمجالات عشان تجيب الكورسات حتى لو متسجلتش بالباقة
+        const keywordsMap: Record<string, string[]> = {
+          'PROGRAMMING': ['برمج', 'كود', 'code', 'programming', 'c++', 'python', 'java', 'web', 'تطوير', 'react'],
+          'LANGUAGES': ['لغة', 'لغات', 'انجليزي', 'english', 'french', 'فرنس', 'تركي', 'russian', 'روسي'],
+          'DESIGN': ['تصميم', 'ديزاين', 'design', 'photoshop', 'illustrator', 'ui', 'ux', 'graphic', 'جرافيك', 'autocad'],
+          'BUSINESS': ['أعمال', 'بزنس', 'business', 'تسويق', 'marketing', 'ادارة', 'مبيعات', 'ربح', 'يوتيوب'],
+          'RELIGION': ['قرآن', 'تحفيظ', 'تجويد', 'اسلام', 'عقيدة']
+        };
+
+        const keywords = keywordsMap[packageType] || [packageType];
+        
+        where.OR = keywords.flatMap(kw => [
+          { title: { contains: kw } },
+          { shortDescription: { contains: kw } },
+          { description: { contains: kw } }
+        ]);
+      }
+    }
 
     const [courses, total] = await Promise.all([
       prisma.course.findMany({
