@@ -26,6 +26,7 @@ router.get('/admin/all', authenticate, requireManager, async (req: Request, res:
         shortDescription: true,
         thumbnailUrl: true,
         packageType: true,
+        category: true, // 🔴 تمت إضافة الحقل الجديد هنا
         originalPrice: true,
         salePrice: true,
         currency: true,
@@ -62,7 +63,6 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const skip = (page - 1) * limit;
     const packageType = req.query.package as string;
 
-    // 🔴 التعديل السحري: تحويل الـ package لفلتر بحث ذكي شامل عشان يشتغل كـ "مجالات" 
     const where: any = {
       status: 'PUBLISHED' as any,
     };
@@ -73,22 +73,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       if (isClassicPackage) {
         where.packageType = packageType as never;
       } else {
-        // كلمات مفتاحية للمجالات عشان تجيب الكورسات حتى لو متسجلتش بالباقة
-        const keywordsMap: Record<string, string[]> = {
-          'PROGRAMMING': ['برمج', 'كود', 'code', 'programming', 'c++', 'python', 'java', 'web', 'تطوير', 'react'],
-          'LANGUAGES': ['لغة', 'لغات', 'انجليزي', 'english', 'french', 'فرنس', 'تركي', 'russian', 'روسي'],
-          'DESIGN': ['تصميم', 'ديزاين', 'design', 'photoshop', 'illustrator', 'ui', 'ux', 'graphic', 'جرافيك', 'autocad'],
-          'BUSINESS': ['أعمال', 'بزنس', 'business', 'تسويق', 'marketing', 'ادارة', 'مبيعات', 'ربح', 'يوتيوب'],
-          'RELIGION': ['قرآن', 'تحفيظ', 'تجويد', 'اسلام', 'عقيدة']
-        };
-
-        const keywords = keywordsMap[packageType] || [packageType];
-        
-        where.OR = keywords.flatMap(kw => [
-          { title: { contains: kw } },
-          { shortDescription: { contains: kw } },
-          { description: { contains: kw } }
-        ]);
+        // 🔴 التعديل الديناميكي النظيف 100%: بحث مباشر في الداتابيز بحقل category بدلاً من الكلمات المفتاحية
+        where.category = packageType;
       }
     }
 
@@ -104,6 +90,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
           shortDescription: true,
           thumbnailUrl: true,
           packageType: true,
+          category: true, // 🔴 تمت إضافة الحقل الجديد هنا
           originalPrice: true,
           salePrice: true,
           currency: true,
@@ -244,6 +231,7 @@ router.post(
     body('title').trim().isLength({ min: 3, max: 200 }),
     body('originalPrice').isFloat({ min: 0 }),
     body('packageType').isIn(['BASIC', 'STANDARD', 'PREMIUM', 'ENTERPRISE']),
+    body('category').optional().isString(), // 🔴 التحقق من الحقل الجديد
     body('commissionRate').optional().isFloat({ min: 0, max: 100 })
   ],
   handleValidation,
@@ -258,6 +246,7 @@ router.post(
         originalPrice,
         salePrice,
         packageType,
+        category, // 🔴 استلام المجال الجديد من الفرونت إند
         commissionRate,
         language,
         level,
@@ -285,6 +274,7 @@ router.post(
           salePrice: salePrice ? parseFloat(salePrice) : null,
           currency: currency || 'USD',
           packageType,
+          category, // 🔴 حفظ المجال الجديد في الداتابيز
           commissionRate: commissionRate ? parseFloat(commissionRate) : 15,
           language: language || 'Arabic',
           level: level || 'Beginner',
@@ -453,6 +443,7 @@ router.get('/admin/pending', authenticate, requireManager, async (req, res, next
         thumbnailUrl: true,
         originalPrice: true,
         packageType: true,
+        category: true, // 🔴 تمت إضافة الحقل الجديد هنا
         status: true,
         createdAt: true
       },

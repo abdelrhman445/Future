@@ -81,6 +81,7 @@ export default function AdminPage() {
     description: '',
     shortDescription: '',
     packageType: 'BASIC',
+    category: '', // 🔴 الحقل الجديد
     originalPrice: '',
     thumbnailUrl: '',
     inspectorIds: [] as string[] 
@@ -256,7 +257,7 @@ export default function AdminPage() {
 
   const handleOpenAddCourse = () => {
     setSelectedCourse(null);
-    setCourseForm({ title: '', description: '', shortDescription: '', packageType: 'BASIC', originalPrice: '', thumbnailUrl: '', inspectorIds: [] });
+    setCourseForm({ title: '', description: '', shortDescription: '', packageType: 'BASIC', category: '', originalPrice: '', thumbnailUrl: '', inspectorIds: [] });
     setCourseDialogOpen(true);
   };
 
@@ -264,7 +265,7 @@ export default function AdminPage() {
     setSelectedCourse(c);
     setCourseForm({
       title: c.title || '', description: c.description || '', shortDescription: c.shortDescription || '',
-      packageType: c.packageType || 'BASIC', originalPrice: c.originalPrice || '', thumbnailUrl: c.thumbnailUrl || '',
+      packageType: c.packageType || 'BASIC', category: c.category || '', originalPrice: c.originalPrice || '', thumbnailUrl: c.thumbnailUrl || '',
       inspectorIds: c.inspectors?.map((i:any) => i.id) || [] 
     });
     setCourseDialogOpen(true);
@@ -278,6 +279,7 @@ export default function AdminPage() {
             ...prev, 
             description: fullCourse.description || prev.description, 
             shortDescription: fullCourse.shortDescription || prev.shortDescription, 
+            category: fullCourse.category || prev.category, 
             thumbnailUrl: fullCourse.thumbnailUrl || prev.thumbnailUrl,
             inspectorIds: fullCourse.inspectors?.map((i:any) => i.id) || prev.inspectorIds
           }));
@@ -296,7 +298,9 @@ export default function AdminPage() {
       const payload: any = {
         title: courseForm.title, description: courseForm.description,
         shortDescription: courseForm.shortDescription || courseForm.description.substring(0, 80),
-        packageType: courseForm.packageType, originalPrice: parseFloat(courseForm.originalPrice) || 0,
+        packageType: courseForm.packageType, 
+        category: courseForm.category, 
+        originalPrice: parseFloat(courseForm.originalPrice) || 0,
       };
       if (courseForm.thumbnailUrl) payload.thumbnailUrl = courseForm.thumbnailUrl;
 
@@ -877,6 +881,23 @@ export default function AdminPage() {
           </FormControl>
 
           <TextField label={ar ? 'السعر ($)' : 'Price ($)'} type="number" value={courseForm.originalPrice} onChange={(e) => setCourseForm({ ...courseForm, originalPrice: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}/>
+
+          {/* 🔴 خانة المجال (Category) الجديدة */}
+          <TextField 
+            label={ar ? 'المجال (مثل: برمجة، تصميم، لغات)' : 'Category (e.g. Programming, Design)'} 
+            value={courseForm.category} 
+            onChange={(e) => setCourseForm({ ...courseForm, category: e.target.value })} 
+            fullWidth 
+            InputProps={{ sx: { color: '#fff' } }} 
+            InputLabelProps={{ sx: { color: palette.textSec } }} 
+            sx={{ 
+              '& .MuiOutlinedInput-root': { 
+                '& fieldset': { borderColor: palette.border }, 
+                '&:hover fieldset': { borderColor: palette.primaryHover } 
+              },
+              mb: 1
+            }} 
+          />
           
           <FormControl fullWidth sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}>
             <InputLabel sx={{ color: palette.textSec }}>{ar ? 'نوع الباقة التابع لها' : 'Package Type'}</InputLabel>

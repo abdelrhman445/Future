@@ -186,6 +186,9 @@ model Course {
   status            CourseStatus @default(DRAFT)
 
   packageType       PackageType  @default(BASIC)
+  
+  // 🔴 الإضافة الجديدة فقط: حقل نصي حر يقبل أي مجال تكتبه أو تختاره
+  category          String?
 
   originalPrice     Float
   salePrice         Float?
