@@ -20,7 +20,7 @@ function handleValidation(req: Request, _res: Response, next: NextFunction): voi
 router.get('/categories/unique', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const categories = await prisma.course.findMany({
-      where: { status: 'PUBLISHED', category: { not: null, not: '' } },
+      where: { status: 'PUBLISHED', category: { not: null } },
       select: { category: true },
       distinct: ['category'],
     });
