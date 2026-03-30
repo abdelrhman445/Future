@@ -7,11 +7,67 @@ import prisma from '../../config/prisma';
 
 const router = Router();
 
+// 🔴 مسار صيانة مؤقت: لتحديث وحساب عدد الدروس للكورسات القديمة
+/*router.get('/fix-old-lessons', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // 1. هنجيب كل الكورسات مع الأقسام وعدد الدروس اللي جوه كل قسم
+    const courses = await prisma.course.findMany({
+      include: {
+        sections: {
+          include: {
+            _count: {
+              select: { lessons: true }
+            }
+          }
+        }
+      }
+    });
+
+    let updatedCount = 0;
+
+    // 2. هنلف عليهم كورس كورس
+    for (const course of courses) {
+      // هنجمع عدد الدروس من كل الأقسام بتاعت الكورس ده
+      const actualTotalLessons = course.sections.reduce((acc, section) => acc + section._count.lessons, 0);
+
+      // 3. هنحدث الكورس بالرقم الحقيقي
+      await prisma.course.update({
+        where: { id: course.id },
+        data: { totalLessons: actualTotalLessons }
+      });
+      
+      updatedCount++;
+    }
+
+    res.json({ 
+      success: true, 
+      message: `تم تصحيح وحساب الدروس لـ ${updatedCount} كورس بنجاح! 🚀 ارجع اعمل ريفريش للصفحة.` 
+    });
+  } catch (err) { 
+    next(err); 
+  }
+});*/
+
 function handleValidation(req: Request, _res: Response, next: NextFunction): void {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return next(new AppError(422, errors.array()[0].msg));
   next();
 }
+
+//
+// ==================== PUBLIC - Get Unique Categories ====================
+// 🔴 إضافة ضرورية عشان زراير الفرونت إند تظهر بناء على الداتابيز
+router.get('/categories/unique', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const categories = await prisma.course.findMany({
+      where: { status: 'PUBLISHED', category: { not: null, not: '' } },
+      select: { category: true },
+      distinct: ['category'],
+    });
+    const list = categories.map(c => c.category);
+    sendSuccess(res, { categories: list });
+  } catch (err) { next(err); }
+});
 
 //
 // ==================== ADMIN - List ALL Courses (Dashboard Only) ====================
@@ -393,6 +449,18 @@ router.post('/sections/:sectionId/lessons', authenticate, requireManager, [
       }
     });
 
+// 🔴 2. السحر هنا: نجيب الكورس اللي تبع القسم ده، ونزود عدد الدروس فيه 1
+    const section = await prisma.courseSection.findUnique({
+      where: { id: req.params.sectionId }
+    });
+
+    if (section) {
+      await prisma.course.update({
+        where: { id: section.courseId },
+        data: { totalLessons: { increment: 1 } } // بيزود العدد تلقائي
+      });
+    }
+
     sendSuccess(res, lesson, 'Lesson created', 201);
 
   } catch (err) { next(err); }
@@ -424,6 +492,31 @@ router.patch('/lessons/:lessonId', authenticate, requireManager, [
 
     sendSuccess(res, lesson, 'Lesson updated successfully');
 
+  } catch (err) { next(err); }
+});
+
+//
+// ==================== ADMIN - Delete Lesson ====================
+// 🔴 إضافة لإنقاص عدد الدروس عند الحذف
+router.delete('/lessons/:lessonId', authenticate, requireManager, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: req.params.lessonId },
+      include: { section: true }
+    });
+
+    if (!lesson) throw new NotFoundError('Lesson not found');
+
+    await prisma.lesson.delete({
+      where: { id: req.params.lessonId }
+    });
+
+    await prisma.course.update({
+      where: { id: lesson.section.courseId },
+      data: { totalLessons: { decrement: 1 } }
+    });
+
+    sendSuccess(res, null, 'Lesson deleted successfully');
   } catch (err) { next(err); }
 });
 

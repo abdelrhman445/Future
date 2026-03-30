@@ -245,11 +245,10 @@ export default function CoursesPage() {
               }}
             />
           </Box>
-  </Container>
-</Box>
+        </Container>
+      </Box>
 
-<Container maxWidth="lg" sx={{ py: 6, position: 'relative', zIndex: 1 }}>
-
+      <Container maxWidth="lg" sx={{ py: 6, position: 'relative', zIndex: 1 }}>
 
         {/* ── فلاتر التصنيف — ديناميكية 100% من الداتابيز ── */}
         <Box
@@ -391,7 +390,6 @@ export default function CoursesPage() {
             <AnimatePresence>
               {filtered.map((course) => {
                 const category = (course as any).category as string | null | undefined;
-                const price = course.salePrice || course.originalPrice || 0;
                 const isFree = course.originalPrice === 0 && !course.salePrice;
 
                 return (
@@ -441,7 +439,7 @@ export default function CoursesPage() {
                           <PlayCircle sx={{ fontSize: 44, color: palette.primary }} />
                         </Box>
 
-                        {/* Category badge — يظهر فقط لو فيه category مكتوبة في الداتابيز */}
+                        {/* Category badge */}
                         {category && (
                           <Chip
                             label={category}
@@ -477,15 +475,11 @@ export default function CoursesPage() {
                           {course.shortDescription || (ar ? 'لا يوجد وصف متاح' : 'No description available')}
                         </Typography>
 
-                        {/* Stats */}
+                        {/* Stats - يقرأ من الداتابيز مباشرة وبيعرض 0 لو الداتابيز فيها 0 */}
                         <Box sx={{ display: 'flex', gap: 2.5, mb: 3, color: palette.textSec, fontSize: '0.9rem', fontWeight: 700 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <MenuBook sx={{ fontSize: 18, color: palette.primary }} />
-                            {course.totalLessons} {ar ? 'درس' : 'lessons'}
-                          </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <AccessTime sx={{ fontSize: 18, color: palette.primary }} />
-                            {Math.round((course.duration || 0) / 60)}h
+                            {Number(course.totalLessons) || 0} {ar ? 'درس' : 'Lessons'}
                           </Box>
                         </Box>
 
@@ -546,7 +540,7 @@ export default function CoursesPage() {
           )}
         </Grid>
 
-        {/* 🔴 زرار عرض المزيد (Load More) */}
+        {/* ── Load More ── */}
         {!loading && hasMore && search === '' && sortBy === 'default' && (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
             <Button
@@ -568,7 +562,9 @@ export default function CoursesPage() {
                 }
               }}
             >
-              {loadingMore ? (ar ? 'جاري التحميل...' : 'Loading...') : (ar ? 'عرض المزيد من الكورسات' : 'Load More Courses')}
+              {loadingMore
+                ? (ar ? 'جاري التحميل...' : 'Loading...')
+                : (ar ? 'عرض المزيد من الكورسات' : 'Load More Courses')}
             </Button>
           </Box>
         )}
