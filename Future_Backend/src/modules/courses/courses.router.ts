@@ -15,7 +15,8 @@ function handleValidation(req: Request, _res: Response, next: NextFunction): voi
 
 //
 // ==================== PUBLIC - Get Unique Categories ====================
-// 🔴 إضافة ضرورية عشان زراير الفرونت إند تظهر بناء على الداتابيز
+// 🔴 مسار ضروري جداً عشان الفرونت إند يقدر يرسم زراير التصنيفات (برمجة، تصميم، إلخ) أوتوماتيك
+//
 router.get('/categories/unique', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const categories = await prisma.course.findMany({
@@ -41,7 +42,7 @@ router.get('/admin/all', authenticate, requireManager, async (req: Request, res:
         shortDescription: true,
         thumbnailUrl: true,
         packageType: true,
-        category: true, // 🔴 تمت إضافة الحقل الجديد هنا
+        category: true, // 🔴 الحقل الجديد
         originalPrice: true,
         salePrice: true,
         currency: true,
@@ -105,7 +106,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
           shortDescription: true,
           thumbnailUrl: true,
           packageType: true,
-          category: true, // 🔴 تمت إضافة الحقل الجديد هنا
+          category: true, // 🔴 الحقل الجديد
           originalPrice: true,
           salePrice: true,
           currency: true,
@@ -408,7 +409,7 @@ router.post('/sections/:sectionId/lessons', authenticate, requireManager, [
       }
     });
 
-// 🔴 2. السحر هنا: نجيب الكورس اللي تبع القسم ده، ونزود عدد الدروس فيه 1
+    // 🔴 السحر هنا: نجيب الكورس اللي تبع القسم ده، ونزود عدد الدروس فيه 1
     const section = await prisma.courseSection.findUnique({
       where: { id: req.params.sectionId }
     });
