@@ -7,46 +7,7 @@ import prisma from '../../config/prisma';
 
 const router = Router();
 
-// 🔴 مسار صيانة مؤقت: لتحديث وحساب عدد الدروس للكورسات القديمة
-/*router.get('/fix-old-lessons', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    // 1. هنجيب كل الكورسات مع الأقسام وعدد الدروس اللي جوه كل قسم
-    const courses = await prisma.course.findMany({
-      include: {
-        sections: {
-          include: {
-            _count: {
-              select: { lessons: true }
-            }
-          }
-        }
-      }
-    });
 
-    let updatedCount = 0;
-
-    // 2. هنلف عليهم كورس كورس
-    for (const course of courses) {
-      // هنجمع عدد الدروس من كل الأقسام بتاعت الكورس ده
-      const actualTotalLessons = course.sections.reduce((acc, section) => acc + section._count.lessons, 0);
-
-      // 3. هنحدث الكورس بالرقم الحقيقي
-      await prisma.course.update({
-        where: { id: course.id },
-        data: { totalLessons: actualTotalLessons }
-      });
-      
-      updatedCount++;
-    }
-
-    res.json({ 
-      success: true, 
-      message: `تم تصحيح وحساب الدروس لـ ${updatedCount} كورس بنجاح! 🚀 ارجع اعمل ريفريش للصفحة.` 
-    });
-  } catch (err) { 
-    next(err); 
-  }
-});*/
 
 function handleValidation(req: Request, _res: Response, next: NextFunction): void {
   const errors = validationResult(req);
