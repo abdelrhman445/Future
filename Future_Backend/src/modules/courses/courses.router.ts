@@ -15,16 +15,23 @@ function handleValidation(req: Request, _res: Response, next: NextFunction): voi
 
 //
 // ==================== PUBLIC - Get Unique Categories ====================
-// 🔴 مسار ضروري جداً عشان الفرونت إند يقدر يرسم زراير التصنيفات (برمجة، تصميم، إلخ) أوتوماتيك
-//
+// 🔴 إضافة ضرورية عشان زراير الفرونت إند تظهر بناء على الداتابيز
 router.get('/categories/unique', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const categories = await prisma.course.findMany({
-      where: { status: 'PUBLISHED', category: { not: null } },
+      where: { 
+        status: 'PUBLISHED', 
+        category: { not: null } // 🔴 تم حل المشكلة هنا (شلنا not التانية)
+      },
       select: { category: true },
       distinct: ['category'],
     });
-    const list = categories.map(c => c.category);
+    
+    // 🔴 فلترة القيم الفاضية هنا في الجافاسكريبت أأمن وأصح
+    const list = categories
+      .map(c => c.category)
+      .filter(c => c && c.trim() !== '');
+
     sendSuccess(res, { categories: list });
   } catch (err) { next(err); }
 });
@@ -42,7 +49,7 @@ router.get('/admin/all', authenticate, requireManager, async (req: Request, res:
         shortDescription: true,
         thumbnailUrl: true,
         packageType: true,
-        category: true, // 🔴 الحقل الجديد
+        category: true, // 🔴 تمت إضافة الحقل الجديد هنا
         originalPrice: true,
         salePrice: true,
         currency: true,
@@ -106,7 +113,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
           shortDescription: true,
           thumbnailUrl: true,
           packageType: true,
-          category: true, // 🔴 الحقل الجديد
+          category: true, // 🔴 تمت إضافة الحقل الجديد هنا
           originalPrice: true,
           salePrice: true,
           currency: true,
@@ -409,7 +416,7 @@ router.post('/sections/:sectionId/lessons', authenticate, requireManager, [
       }
     });
 
-    // 🔴 السحر هنا: نجيب الكورس اللي تبع القسم ده، ونزود عدد الدروس فيه 1
+    // 🔴 2. السحر هنا: نجيب الكورس اللي تبع القسم ده، ونزود عدد الدروس فيه 1
     const section = await prisma.courseSection.findUnique({
       where: { id: req.params.sectionId }
     });
