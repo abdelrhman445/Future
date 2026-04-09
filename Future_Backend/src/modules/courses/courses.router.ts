@@ -310,6 +310,18 @@ router.post(
         }
       });
 
+      // 🔴 [إضافة اللوج]
+      await prisma.auditLog.create({
+        data: {
+          userId: req.user!.userId,
+          action: 'CREATE_COURSE',
+          resource: 'Courses',
+          resourceId: course.id,
+          ipAddress: req.ip || '',
+          metadata: JSON.stringify({ title: course.title })
+        }
+      });
+
       sendSuccess(res, course, 'Course created', 201);
 
     } catch (err) { next(err); }
@@ -342,6 +354,18 @@ router.post('/:courseId/assign-inspectors', authenticate, requireAdmin, [
       }
     });
 
+    // 🔴 [إضافة اللوج]
+    await prisma.auditLog.create({
+      data: {
+        userId: req.user!.userId,
+        action: 'UPDATE_COURSE',
+        resource: 'Courses',
+        resourceId: courseId,
+        ipAddress: req.ip || '',
+        metadata: JSON.stringify({ action: 'Assign Inspectors', count: inspectorIds.length })
+      }
+    });
+
     sendSuccess(res, updatedCourse, 'تم تحديث مفتشي الكورس بنجاح 🎉');
   } catch (err) { next(err); }
 });
@@ -355,6 +379,18 @@ router.patch('/:courseId', authenticate, requireManager, async (req: Request, re
     const course = await prisma.course.update({
       where: { id: req.params.courseId },
       data: req.body
+    });
+
+    // 🔴 [إضافة اللوج]
+    await prisma.auditLog.create({
+      data: {
+        userId: req.user!.userId,
+        action: 'UPDATE_COURSE',
+        resource: 'Courses',
+        resourceId: course.id,
+        ipAddress: req.ip || '',
+        metadata: JSON.stringify({ updatedFields: Object.keys(req.body) })
+      }
     });
 
     sendSuccess(res, course, 'Course updated');
@@ -371,6 +407,17 @@ router.delete('/:courseId', authenticate, requireAdmin, async (req: Request, res
     await prisma.course.update({
       where: { id: req.params.courseId },
       data: { status: 'ARCHIVED' as any } 
+    });
+
+    // 🔴 [إضافة اللوج]
+    await prisma.auditLog.create({
+      data: {
+        userId: req.user!.userId,
+        action: 'DELETE_COURSE',
+        resource: 'Courses',
+        resourceId: req.params.courseId,
+        ipAddress: req.ip || ''
+      }
     });
 
     sendSuccess(res, null, 'Course archived');
@@ -537,6 +584,17 @@ router.patch(
       const course = await prisma.course.update({
         where: { id: req.params.courseId },
         data: { status: 'PUBLISHED' as any } 
+      });
+
+      // 🔴 [إضافة اللوج]
+      await prisma.auditLog.create({
+        data: {
+          userId: req.user!.userId,
+          action: 'PUBLISH_COURSE',
+          resource: 'Courses',
+          resourceId: course.id,
+          ipAddress: req.ip || ''
+        }
       });
 
       sendSuccess(res, course, 'Course published');

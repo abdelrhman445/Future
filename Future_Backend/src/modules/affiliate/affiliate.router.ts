@@ -164,6 +164,18 @@ router.post('/withdraw', authenticate, [
       return w;
     });
 
+    // 🔴 [إضافة اللوج] تسجيل طلب السحب الجديد
+    await prisma.auditLog.create({
+      data: {
+        userId: userId, // المسوق اللي طلب الفلوس
+        action: 'WITHDRAWAL_REQUEST',
+        resource: 'Withdrawals',
+        resourceId: withdrawal.id,
+        ipAddress: req.ip || '', // عشان نعرف طلب منين
+        metadata: JSON.stringify({ amount, method, accountDetails })
+      }
+    });
+
     sendSuccess(res, { withdrawalId: withdrawal.id }, 'Withdrawal request submitted', 201);
   } catch (err) { next(err); }
 });
@@ -220,6 +232,22 @@ router.patch('/withdrawals/:id', authenticate, requireAdmin, [
         data: { status: 'PAID' },
       });
     }
+
+    // 🔴 [إضافة اللوج] تسجيل مراجعة الأدمن لطلب السحب
+    let actionName = 'WITHDRAWAL_PROCESSING';
+    if (status === 'COMPLETED') actionName = 'WITHDRAWAL_APPROVED';
+    if (status === 'REJECTED') actionName = 'WITHDRAWAL_REJECTED';
+
+    await prisma.auditLog.create({
+      data: {
+        userId: req.user!.userId, // الأدمن اللي راجع الطلب
+        action: actionName,
+        resource: 'Withdrawals',
+        resourceId: withdrawal.id,
+        ipAddress: req.ip || '',
+        metadata: JSON.stringify({ targetUserId: withdrawal.userId, amount: withdrawal.amount, adminNote })
+      }
+    });
 
     sendSuccess(res, withdrawal, 'Withdrawal updated');
   } catch (err) { next(err); }

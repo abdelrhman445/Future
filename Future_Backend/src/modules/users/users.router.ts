@@ -238,6 +238,21 @@ router.patch('/:userId/status', authenticate, requireManager, async (req: Reques
       data: { isActive: req.body.isActive },
       select: { id: true, email: true, isActive: true },
     });
+
+
+    // 🔴 [إضافة اللوج] تسجيل تفعيل أو تعطيل المستخدم
+    await prisma.auditLog.create({
+      data: {
+        userId: req.user!.userId, // المدير اللي عمل الأكشن
+        action: req.body.isActive ? 'ACTIVATE_USER' : 'DEACTIVATE_USER',
+        resource: 'Users',
+        resourceId: user.id,
+        ipAddress: req.ip || '',
+        metadata: JSON.stringify({ targetEmail: user.email })
+      }
+    });
+
+
     sendSuccess(res, user, `User ${user.isActive ? 'activated' : 'deactivated'}`);
   } catch (err) { next(err); }
 });
@@ -275,6 +290,21 @@ router.patch('/:userId/role', authenticate, requireManager, [
       select: { id: true, email: true, role: true },
     });
     
+
+    // 🔴 [إضافة اللوج] تسجيل تعديل رتبة المستخدم
+    await prisma.auditLog.create({
+      data: {
+        userId: req.user!.userId, // المدير اللي رقى أو نزل الرتبة
+        action: 'CHANGE_USER_ROLE',
+        resource: 'Users',
+        resourceId: user.id,
+        ipAddress: req.ip || '',
+        metadata: JSON.stringify({ targetEmail: user.email, oldRole: targetUser.role, newRole: user.role })
+      }
+    });
+
+
+
     sendSuccess(res, user, 'Role updated successfully');
   } catch (err) { next(err); }
 });
@@ -296,6 +326,18 @@ router.delete('/:userId', authenticate, requireAdmin, async (req: Request, res: 
     // 3. تنفيذ الحذف النهائي
     await prisma.user.delete({
       where: { id: userId }
+    });
+
+    // 🔴 [إضافة اللوج] تسجيل حذف المستخدم نهائياً
+    await prisma.auditLog.create({
+      data: {
+        userId: req.user!.userId, // الأدمن الكبير اللي مسح الحساب
+        action: 'DELETE_USER',
+        resource: 'Users',
+        resourceId: userId,
+        ipAddress: req.ip || '',
+        metadata: JSON.stringify({ targetEmail: targetUser.email })
+      }
     });
 
     sendSuccess(res, null, 'تم حذف المستخدم وجميع بياناته المرتبطة بنجاح 🗑️');
