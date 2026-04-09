@@ -220,7 +220,7 @@ export default function VerifyOtpPage() {
               } 
             }}
           >
-            {loading ? (ar ? 'جاري التحقق...' : 'Verifying...') : (ar ? 'تأكيد الحساب' : 'Verify Account')}
+            {loading ? (ar ? 'جاري التحقق ...' : 'Verifying ...') : (ar ? 'تأكيد الحساب' : 'Verify Account')}
           </Button>
 
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>

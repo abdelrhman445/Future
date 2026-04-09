@@ -180,7 +180,7 @@ export default function LoginPage() {
                   '&:hover': { background: `linear-gradient(135deg, ${palette.primaryHover}, ${palette.primary})`, transform: 'translateY(-2px)', boxShadow: `0 12px 30px rgba(48,192,242,0.4)` },
                   transition: 'all 0.3s'
                 }}>
-                {loading ? (ar ? 'جاري الدخول...' : 'Logging in...') : (ar ? 'دخول' : 'Login')}
+                {loading ? (ar ? 'جار ي الدخول ...' : 'Logging in ...') : (ar ? 'دخول' : 'Login')}
               </Button>
 
               <Divider sx={{ borderColor: 'rgba(37,154,203,0.3)', my: 2 }}>
