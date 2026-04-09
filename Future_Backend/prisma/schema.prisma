@@ -82,6 +82,8 @@ model User {
   isEmailVerified Boolean  @default(false)
   isActive        Boolean  @default(true)
 
+  canViewLogs     Boolean  @default(false)
+
   avatarUrl       String?
 
   affiliateCode   String   @unique
@@ -197,7 +199,7 @@ model Course {
 
   commissionRate    Float        @default(15)
 
-  duration          Int?
+  duration          String?
   totalLessons      Int          @default(0)
 
   language          String       @default("ar")

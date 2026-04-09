@@ -82,6 +82,7 @@ export default function AdminPage() {
     shortDescription: '',
     packageType: 'BASIC',
     category: '', // 🔴 الحقل الجديد
+    duration: '', // 🔴 1. State الخاصة بالوقت
     originalPrice: '',
     thumbnailUrl: '',
     inspectorIds: [] as string[] 
@@ -257,7 +258,7 @@ export default function AdminPage() {
 
   const handleOpenAddCourse = () => {
     setSelectedCourse(null);
-    setCourseForm({ title: '', description: '', shortDescription: '', packageType: 'BASIC', category: '', originalPrice: '', thumbnailUrl: '', inspectorIds: [] });
+    setCourseForm({ title: '', description: '', shortDescription: '', packageType: 'BASIC', category: '', duration: '', originalPrice: '', thumbnailUrl: '', inspectorIds: [] });
     setCourseDialogOpen(true);
   };
 
@@ -265,7 +266,7 @@ export default function AdminPage() {
     setSelectedCourse(c);
     setCourseForm({
       title: c.title || '', description: c.description || '', shortDescription: c.shortDescription || '',
-      packageType: c.packageType || 'BASIC', category: c.category || '', originalPrice: c.originalPrice || '', thumbnailUrl: c.thumbnailUrl || '',
+      packageType: c.packageType || 'BASIC', category: c.category || '', duration: c.duration || '', originalPrice: c.originalPrice || '', thumbnailUrl: c.thumbnailUrl || '',
       inspectorIds: c.inspectors?.map((i:any) => i.id) || [] 
     });
     setCourseDialogOpen(true);
@@ -280,6 +281,7 @@ export default function AdminPage() {
             description: fullCourse.description || prev.description, 
             shortDescription: fullCourse.shortDescription || prev.shortDescription, 
             category: fullCourse.category || prev.category, 
+            duration: fullCourse.duration || prev.duration, // 🔴 2. تحديث State عند التعديل
             thumbnailUrl: fullCourse.thumbnailUrl || prev.thumbnailUrl,
             inspectorIds: fullCourse.inspectors?.map((i:any) => i.id) || prev.inspectorIds
           }));
@@ -300,6 +302,7 @@ export default function AdminPage() {
         shortDescription: courseForm.shortDescription || courseForm.description.substring(0, 80),
         packageType: courseForm.packageType, 
         category: courseForm.category, 
+        duration: courseForm.duration, // 🔴 3. تجهيز payload الخاص بـ Request
         originalPrice: parseFloat(courseForm.originalPrice) || 0,
       };
       if (courseForm.thumbnailUrl) payload.thumbnailUrl = courseForm.thumbnailUrl;
@@ -537,7 +540,7 @@ export default function AdminPage() {
                     sx={{ borderColor: palette.primary, color: palette.primary, fontWeight: 'bold', '&:hover': { borderColor: palette.primaryHover, background: 'rgba(48,192,242,0.1)' } }}>
                     {ar ? 'إدارة محتوى الكورسات' : 'Manage Courses Content'}
                   </Button>
-                  <Button variant="contained" startIcon={<Add />} onClick={handleOpenAddCourse} sx={{ background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, color: '#000', fontWeight: 'bold' }}>
+                  <Button variant="contained" startIcon={<Add sx={{ mr: ar ? -1 : 1, ml: ar ? 1 : -1 }} />} onClick={handleOpenAddCourse} sx={{ background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, color: '#000', fontWeight: 'bold' }}>
                     {ar ? 'إضافة كورس' : 'Add Course'}
                   </Button>
                 </Box>
@@ -650,7 +653,7 @@ export default function AdminPage() {
             {user?.role === 'ADMIN' && tab === 4 && (
               <Box>
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-                  <Button variant="contained" startIcon={<Add />} onClick={handleOpenAddPackage} sx={{ background: palette.primary, color: '#000', fontWeight: 'bold' }}>{ar ? 'إنشاء باقة' : 'Create Package'}</Button>
+                  <Button variant="contained" startIcon={<Add sx={{ mr: ar ? -1 : 1, ml: ar ? 1 : -1 }} />} onClick={handleOpenAddPackage} sx={{ background: palette.primary, color: '#000', fontWeight: 'bold' }}>{ar ? 'إنشاء باقة' : 'Create Package'}</Button>
                 </Box>
                 <Card sx={{ p: 2, background: palette.cardBg, border: `1px solid ${palette.border}`, borderRadius: 3 }}>
                   <TableContainer>
@@ -694,7 +697,7 @@ export default function AdminPage() {
                        <Refresh />
                      </Button>
                    </Box>
-                   <Button variant="contained" startIcon={<WorkspacePremiumRounded />} onClick={() => setIssueCertOpen(true)}
+                   <Button variant="contained" startIcon={<WorkspacePremiumRounded sx={{ mr: ar ? -1 : 1, ml: ar ? 1 : -1 }} />} onClick={() => setIssueCertOpen(true)}
                      sx={{ background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, color: '#000', fontWeight: 900, px: 3 }}>
                      {ar ? 'إصدار شهادة يدوياً' : 'Issue Manual Certificate'}
                    </Button>
@@ -882,11 +885,28 @@ export default function AdminPage() {
 
           <TextField label={ar ? 'السعر ($)' : 'Price ($)'} type="number" value={courseForm.originalPrice} onChange={(e) => setCourseForm({ ...courseForm, originalPrice: e.target.value })} fullWidth InputProps={{ sx: { color: '#fff' } }} InputLabelProps={{ sx: { color: palette.textSec } }} sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: palette.border } } }}/>
 
-          {/* 🔴 خانة المجال (Category) الجديدة */}
+          {/* 🔴 خانة المجال (Category) */}
           <TextField 
             label={ar ? 'المجال (مثل: برمجة، تصميم، لغات)' : 'Category (e.g. Programming, Design)'} 
             value={courseForm.category} 
             onChange={(e) => setCourseForm({ ...courseForm, category: e.target.value })} 
+            fullWidth 
+            InputProps={{ sx: { color: '#fff' } }} 
+            InputLabelProps={{ sx: { color: palette.textSec } }} 
+            sx={{ 
+              '& .MuiOutlinedInput-root': { 
+                '& fieldset': { borderColor: palette.border }, 
+                '&:hover fieldset': { borderColor: palette.primaryHover } 
+              },
+              mb: 1
+            }} 
+          />
+
+          {/* 🔴 4. خانة المدة (Duration) الجديدة */}
+          <TextField 
+            label={ar ? 'مدة الكورس (مثال: 15 ساعة، 2 Months)' : 'Course Duration (e.g., 15 Hours)'} 
+            value={courseForm.duration} 
+            onChange={(e) => setCourseForm({ ...courseForm, duration: e.target.value })} 
             fullWidth 
             InputProps={{ sx: { color: '#fff' } }} 
             InputLabelProps={{ sx: { color: palette.textSec } }} 

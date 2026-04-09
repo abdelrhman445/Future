@@ -50,10 +50,11 @@ router.get('/admin/all', authenticate, requireManager, async (req: Request, res:
         thumbnailUrl: true,
         packageType: true,
         category: true, // 🔴 تمت إضافة الحقل الجديد هنا
+        duration: true,
         originalPrice: true,
         salePrice: true,
         currency: true,
-        duration: true,
+        
         totalLessons: true,
         language: true,
         level: true,
@@ -113,11 +114,12 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
           shortDescription: true,
           thumbnailUrl: true,
           packageType: true,
-          category: true, // 🔴 تمت إضافة الحقل الجديد هنا
+          category: true, 
+          duration: true,
           originalPrice: true,
           salePrice: true,
           currency: true,
-          duration: true,
+          
           totalLessons: true,
           language: true,
           level: true,
@@ -254,7 +256,8 @@ router.post(
     body('title').trim().isLength({ min: 3, max: 200 }),
     body('originalPrice').isFloat({ min: 0 }),
     body('packageType').isIn(['BASIC', 'STANDARD', 'PREMIUM', 'ENTERPRISE']),
-    body('category').optional().isString(), // 🔴 التحقق من الحقل الجديد
+    body('category').optional().isString(), 
+    body('duration').optional().isString(),
     body('commissionRate').optional().isFloat({ min: 0, max: 100 })
   ],
   handleValidation,
@@ -269,7 +272,8 @@ router.post(
         originalPrice,
         salePrice,
         packageType,
-        category, // 🔴 استلام المجال الجديد من الفرونت إند
+        category,
+        
         commissionRate,
         language,
         level,
@@ -297,11 +301,12 @@ router.post(
           salePrice: salePrice ? parseFloat(salePrice) : null,
           currency: currency || 'USD',
           packageType,
-          category, // 🔴 حفظ المجال الجديد في الداتابيز
+          category,
+          duration: duration || null,
           commissionRate: commissionRate ? parseFloat(commissionRate) : 15,
           language: language || 'Arabic',
           level: level || 'Beginner',
-          duration: duration ? parseInt(duration) : null
+          
         }
       });
 

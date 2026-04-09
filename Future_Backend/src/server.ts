@@ -20,6 +20,7 @@ import presentationsRouter from './modules/presentations/presentations.router';
 import mediaRouter from './modules/media/media.router';
 import paymentsRouter from './modules/payments/payments.router';
 import managerRouter from './modules/manager/manager.router';
+import logsRouter from './modules/logs/logs.router';
 
 import prisma from './config/prisma';
 
@@ -72,6 +73,7 @@ app.use(`${API_PREFIX}/payments`, paymentsRouter);
 app.use('/api/inspector', inspectorRouter);
 app.use('/api/packages', packagesRouter);
 app.use('/api/certificates', certificatesRouter);
+app.use('/api/logs', logsRouter);
 // ==================== 404 & ERROR HANDLERS ====================
 app.use(notFoundHandler);
 app.use(globalErrorHandler);

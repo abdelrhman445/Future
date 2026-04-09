@@ -87,6 +87,20 @@ router.patch('/profile', authenticate, [
       data: { firstName, lastName, phone },
       select: { id: true, email: true, firstName: true, lastName: true, phone: true },
     });
+
+    // 2. 🔴 كود اللوجات (تسجيل الحدث) بنحطه هنا 🔴
+    await prisma.auditLog.create({
+      data: {
+        userId: req.user!.userId,       // مين اللي عمل الأكشن؟
+        action: 'UPDATE_PROFILE',       // إيه هو الأكشن؟
+        resource: 'User Settings',      // في أي مكان؟
+        resourceId: user.id,            // الـ ID بتاع اليوزر اللي اتعدل
+        // لو ضايف IP و UserAgent في الداتابيز شيل الكومنت من السطرين الجايين:
+        // ipAddress: req.ip || '',
+        // userAgent: req.headers['user-agent'] || ''
+      }
+    });
+
     sendSuccess(res, user, 'Profile updated');
   } catch (err) { next(err); }
 });

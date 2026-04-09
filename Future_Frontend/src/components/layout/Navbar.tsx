@@ -44,7 +44,6 @@ export default function Navbar() {
   useEffect(() => { 
     setMounted(true); 
     const handleScroll = () => {
-      // 🔴 لما ينزل أكتر من 20 بيكسل، الناف بار بيفصل ويبقى Pinned
       setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener('scroll', handleScroll);
@@ -89,26 +88,26 @@ export default function Navbar() {
 
   return (
     <>
-      {/* 🔴 مساحة وهمية (Placeholder) تعوض مساحة الناف بار لما يبقى Fixed عشان الصفحة متتنططش */}
-      <Box sx={{ height: isScrolled ? '85px' : '0px', transition: 'height 0.4s ease' }} />
+      {/* 🔴 مساحة وهمية (Placeholder) تعوض مساحة الناف بار بتمرير أنعم */}
+      <Box sx={{ height: isScrolled ? '85px' : '0px', transition: 'height 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)' }} />
 
       <Box 
         component={motion.div} 
-        initial={{ y: -20, opacity: 0 }} 
+        initial={{ y: -50, opacity: 0 }} 
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
+        transition={{ type: "spring", stiffness: 120, damping: 15, mass: 1 }}
         sx={{ 
-          // 🔴 التعديل هنا: طبيعي (Relative) في البداية، ولما تنزل يقلب Fixed عشان يبقى Pinned
           position: isScrolled ? 'fixed' : 'relative',
           top: 0, 
           left: 0, 
           right: 0, 
           width: '100%', 
           zIndex: 1100,
-          animation: isScrolled ? 'slideDown 0.4s ease-in-out' : 'none',
-          '@keyframes slideDown': {
-            '0%': { transform: 'translateY(-100%)' },
-            '100%': { transform: 'translateY(0)' }
+          // 🔴 أنيميشن نزول أكثر نعومة وانسيابية عند الـ Scroll
+          animation: isScrolled ? 'slideDownSmooth 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)' : 'none',
+          '@keyframes slideDownSmooth': {
+            '0%': { transform: 'translateY(-100%)', opacity: 0.5 },
+            '100%': { transform: 'translateY(0)', opacity: 1 }
           }
         }}
       >
@@ -118,8 +117,8 @@ export default function Navbar() {
             backdropFilter: isScrolled ? 'blur(20px)' : 'none', 
             WebkitBackdropFilter: isScrolled ? 'blur(20px)' : 'none',
             borderBottom: isScrolled ? `1px solid rgba(48,192,242,0.3)` : `1px solid transparent`,
-            boxShadow: isScrolled ? '0 10px 30px rgba(0, 0, 0, 0.6)' : 'none',
-            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+            boxShadow: isScrolled ? '0 10px 40px rgba(0, 0, 0, 0.5)' : 'none',
+            transition: 'all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)'
           }}>
           <Toolbar 
             sx={{ 
@@ -128,13 +127,19 @@ export default function Navbar() {
               width: '100%', 
               mx: 'auto', 
               px: { xs: 2, md: 3 }, 
-              py: isScrolled ? 0.5 : 1.5, 
-              transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+              py: isScrolled ? 0.8 : 1.8, 
+              transition: 'all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)'
             }}
           >
 
             <Link href={`/${locale}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Box component={motion.div} whileHover={{ scale: 1.05 }} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, filter: 'drop-shadow(0px 0px 8px rgba(48,192,242,0.4))' }}>
+              {/* 🔴 أنيميشن اللوجو: تفاعل أفضل عند التحويم والنقر */}
+              <Box 
+                component={motion.div} 
+                whileHover={{ scale: 1.1, rotate: 5 }} 
+                whileTap={{ scale: 0.9 }}
+                transition={{ type: "spring", stiffness: 300, damping: 10 }}
+                sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, filter: 'drop-shadow(0px 0px 8px rgba(48,192,242,0.4))' }}>
                 <Image src="/logo.png" alt="Future Logo" width={38} height={38} style={{ objectFit: 'contain' }} priority />
               </Box>
               <Typography variant="h6" sx={{ fontWeight: 900, fontSize: 22, background: `linear-gradient(135deg, ${palette.primary}, #fff)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: 0.5, textShadow: '0 2px 10px rgba(48,192,242,0.2)' }}>
@@ -142,7 +147,14 @@ export default function Navbar() {
               </Typography>
             </Link>
 
-            <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 3, alignItems: 'center' }}>
+            {/* 🔴 أنيميشن ظهور متتالي لروابط الناف بار */}
+            <Box 
+              component={motion.div}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.1, type: "spring" }}
+              sx={{ display: { xs: 'none', md: 'flex' }, gap: 3, alignItems: 'center' }}
+            >
               {(
                 mounted && isAuthenticated
                   ? [
@@ -169,7 +181,7 @@ export default function Navbar() {
                     px: 2,
                     py: 1,
                     borderRadius: 2,
-                    transition: 'all 0.3s ease',
+                    transition: 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)',
                     '&::after': {
                       content: '""',
                       position: 'absolute',
@@ -180,15 +192,16 @@ export default function Navbar() {
                       height: '3px',
                       borderRadius: '2px',
                       background: palette.primary,
-                      transition: 'width 0.3s ease',
+                      transition: 'width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)',
                       boxShadow: `0 0 8px ${palette.primary}`,
                     },
                     '&:hover': { 
                       color: palette.textMain, 
-                      background: 'rgba(48,192,242,0.05)',
+                      background: 'rgba(48,192,242,0.08)',
+                      transform: 'translateY(-2px)'
                     },
                     '&:hover::after': {
-                      width: '20px'
+                      width: '24px'
                     }
                   }}
                 >
@@ -211,8 +224,8 @@ export default function Navbar() {
                   px: 2,
                   py: 1,
                   borderRadius: 2,
-                  transition: 'all 0.3s',
-                  '&:hover': { color: '#25D366', background: 'rgba(37,211,102,0.08)', boxShadow: '0 4px 15px rgba(37,211,102,0.1)' } 
+                  transition: 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)',
+                  '&:hover': { color: '#25D366', background: 'rgba(37,211,102,0.1)', boxShadow: '0 4px 20px rgba(37,211,102,0.15)', transform: 'translateY(-2px)' } 
                 }}
               >
                 <SupportAgentRounded fontSize="small" sx={{ filter: 'drop-shadow(0 0 5px rgba(37,211,102,0.3))' }} />
@@ -229,8 +242,8 @@ export default function Navbar() {
                   px: 1.5, 
                   mx: 1, 
                   gap: 0.5, 
-                  transition: 'all 0.3s',
-                  '&:hover': { borderColor: palette.primary, color: palette.primary, background: 'rgba(48,192,242,0.05)', transform: 'translateY(-2px)', boxShadow: `0 4px 12px rgba(48,192,242,0.15)` } 
+                  transition: 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)',
+                  '&:hover': { borderColor: palette.primary, color: palette.primary, background: 'rgba(48,192,242,0.08)', transform: 'translateY(-3px)', boxShadow: `0 6px 15px rgba(48,192,242,0.2)` } 
                 }} 
                 size="small"
               >
@@ -242,7 +255,13 @@ export default function Navbar() {
                 <Box sx={{ width: 150 }} />
               ) : isAuthenticated && user ? (
                 <>
-                  <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} sx={{ p: 0.5, ml: 1, transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.05)' } }}>
+                  <IconButton 
+                    onClick={(e) => setAnchorEl(e.currentTarget)} 
+                    component={motion.button}
+                    whileHover={{ scale: 1.08 }}
+                    whileTap={{ scale: 0.95 }}
+                    sx={{ p: 0.5, ml: 1, outline: 'none', border: 'none', background: 'transparent' }}
+                  >
                     <Avatar sx={{ 
                       width: 44, height: 44, 
                       background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, 
@@ -256,6 +275,7 @@ export default function Navbar() {
                   <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}
                     transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                     anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                    transitionDuration={300} // 🔴 مدة أنيميشن المينيو
                     PaperProps={{ 
                       sx: { 
                         background: 'rgba(10, 10, 15, 0.95)', 
@@ -264,7 +284,7 @@ export default function Navbar() {
                         mt: 1.5, 
                         minWidth: 240, 
                         borderRadius: 4, 
-                        boxShadow: `0 12px 40px rgba(0,0,0,0.6), 0 0 20px rgba(48,192,242,0.1)`,
+                        boxShadow: `0 15px 45px rgba(0,0,0,0.7), 0 0 25px rgba(48,192,242,0.15)`,
                         overflow: 'hidden'
                       } 
                     }}>
@@ -275,58 +295,58 @@ export default function Navbar() {
                     </Box>
 
                     <Box sx={{ p: 1 }}>
-                      <MenuItem component={Link} href={`/${locale}/dashboard`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(255,255,255,0.05)', pl: 3} }}>
+                      <MenuItem component={Link} href={`/${locale}/dashboard`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': {bgcolor: 'rgba(255,255,255,0.08)', pl: 3.5} }}>
                         <Dashboard sx={{ mr: 1.5, fontSize: 20, color: palette.primary }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.dashboard}</Typography>
                       </MenuItem>
                       
-                      <MenuItem component={Link} href={`/${locale}/my-courses`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(255,255,255,0.05)', pl: 3} }}>
+                      <MenuItem component={Link} href={`/${locale}/my-courses`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': {bgcolor: 'rgba(255,255,255,0.08)', pl: 3.5} }}>
                         <School sx={{ mr: 1.5, fontSize: 20, color: palette.textMain }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.myCourses}</Typography>
                       </MenuItem>
 
-                      <MenuItem component={Link} href={`/${locale}/my-packages`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(255,255,255,0.05)', pl: 3} }}>
+                      <MenuItem component={Link} href={`/${locale}/my-packages`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': {bgcolor: 'rgba(255,255,255,0.08)', pl: 3.5} }}>
                         <LocalOfferRounded sx={{ mr: 1.5, fontSize: 20, color: palette.accent }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.myPackages}</Typography>
                       </MenuItem>
 
                       {hasAffiliate && (
-                        <MenuItem component={Link} href={`/${locale}/affiliate`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(74,222,128,0.1)', pl: 3} }}>
+                        <MenuItem component={Link} href={`/${locale}/affiliate`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': {bgcolor: 'rgba(74,222,128,0.15)', pl: 3.5} }}>
                           <TrendingUp sx={{ mr: 1.5, fontSize: 20, color: '#4ade80' }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.affiliate}</Typography>
                         </MenuItem>
                       )}
 
                       {isInspector && (
                         <Box>
-                          <MenuItem component={Link} href={`/${locale}/inspector`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(255,255,255,0.05)', pl: 3} }}>
+                          <MenuItem component={Link} href={`/${locale}/inspector`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': {bgcolor: 'rgba(255,255,255,0.08)', pl: 3.5} }}>
                             <CoPresent sx={{ mr: 1.5, fontSize: 20, color: palette.primaryHover }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.inspector}</Typography>
                           </MenuItem>
-                          <MenuItem component={Link} href={`/${locale}/inspector/evaluations`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(255,255,255,0.05)', pl: 3} }}>
+                          <MenuItem component={Link} href={`/${locale}/inspector/evaluations`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': {bgcolor: 'rgba(255,255,255,0.08)', pl: 3.5} }}>
                             <Assignment sx={{ mr: 1.5, fontSize: 20, color: palette.primaryHover }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.evaluations}</Typography>
                           </MenuItem>
                         </Box>
                       )}
 
                       {isAdmin && (
-                        <MenuItem component={Link} href={`/${locale}/admin`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(168,85,247,0.1)', pl: 3} }}>
+                        <MenuItem component={Link} href={`/${locale}/admin`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': {bgcolor: 'rgba(168,85,247,0.15)', pl: 3.5} }}>
                           <AdminPanelSettings sx={{ mr: 1.5, fontSize: 20, color: '#a855f7' }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.admin}</Typography>
                         </MenuItem>
                       )}
 
                       {isManager && (
-                        <MenuItem component={Link} href={`/${locale}/manager`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(249,115,22,0.1)', pl: 3} }}>
+                        <MenuItem component={Link} href={`/${locale}/manager`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': {bgcolor: 'rgba(249,115,22,0.15)', pl: 3.5} }}>
                           <ManageAccountsRounded sx={{ mr: 1.5, fontSize: 20, color: '#f97316' }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.manager}</Typography>
                         </MenuItem>
                       )}
 
                       <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)', my: 1 }} />
                       
-                      <MenuItem component={Link} href={`/${locale}/my-certificates`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(255,255,255,0.05)', pl: 3} }}>
+                      <MenuItem component={Link} href={`/${locale}/my-certificates`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': {bgcolor: 'rgba(255,255,255,0.08)', pl: 3.5} }}>
                         <WorkspacePremium sx={{ mr: 1.5, fontSize: 20, color: palette.primary }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.myCertificates}</Typography>
                       </MenuItem>
 
-                      <MenuItem component={Link} href={`/${locale}/settings`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(255,255,255,0.05)', pl: 3} }}>
+                      <MenuItem component={Link} href={`/${locale}/settings`} onClick={() => setAnchorEl(null)} sx={{ borderRadius: 2, mb: 0.5, py: 1.2, transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': {bgcolor: 'rgba(255,255,255,0.08)', pl: 3.5} }}>
                         <Settings sx={{ mr: 1.5, fontSize: 20, color: palette.textSec }} /> <Typography sx={{color: '#fff', fontWeight: 600, fontSize: '0.95rem'}}>{t.settings}</Typography>
                       </MenuItem>
 
-                      <MenuItem onClick={handleLogout} sx={{ borderRadius: 2, py: 1.2, color: palette.danger, transition: 'all 0.2s', '&:hover': {bgcolor: 'rgba(230,47,118,0.1)', pl: 3} }}>
+                      <MenuItem onClick={handleLogout} sx={{ borderRadius: 2, py: 1.2, color: palette.danger, transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': {bgcolor: 'rgba(230,47,118,0.15)', pl: 3.5} }}>
                         <Logout sx={{ mr: 1.5, fontSize: 20 }} /> <Typography sx={{fontWeight: 800, fontSize: '0.95rem'}}>{t.logout}</Typography>
                       </MenuItem>
                     </Box>
@@ -343,8 +363,8 @@ export default function Navbar() {
                       fontWeight: 800, 
                       fontSize: '0.95rem', 
                       borderRadius: 3, 
-                      transition: 'all 0.3s',
-                      '&:hover': { borderColor: palette.primary, color: palette.primary, background: 'rgba(48,192,242,0.05)', transform: 'translateY(-2px)', boxShadow: `0 4px 15px rgba(48,192,242,0.15)` } 
+                      transition: 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)',
+                      '&:hover': { borderColor: palette.primary, color: palette.primary, background: 'rgba(48,192,242,0.08)', transform: 'translateY(-3px)', boxShadow: `0 6px 20px rgba(48,192,242,0.2)` } 
                     }}>
                     {t.login}
                   </Button>
@@ -358,8 +378,8 @@ export default function Navbar() {
                       fontSize: '0.95rem', 
                       borderRadius: 3, 
                       boxShadow: `0 4px 15px rgba(48,192,242,0.3)`,
-                      transition: 'all 0.3s',
-                      '&:hover': { background: `linear-gradient(135deg, ${palette.primaryHover}, ${palette.primary})`, transform: 'translateY(-2px)', boxShadow: `0 6px 20px rgba(48,192,242,0.5)` } 
+                      transition: 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)',
+                      '&:hover': { background: `linear-gradient(135deg, ${palette.primaryHover}, ${palette.primary})`, transform: 'translateY(-3px)', boxShadow: `0 8px 25px rgba(48,192,242,0.5)` } 
                     }}>
                     {t.register}
                   </Button>
@@ -367,27 +387,34 @@ export default function Navbar() {
               )}
             </Box>
 
-            <IconButton sx={{ display: { md: 'none' }, color: palette.primary }} onClick={() => setMobileOpen(true)}>
+            <IconButton 
+              sx={{ display: { md: 'none' }, color: palette.primary, transition: 'transform 0.3s', '&:hover': { transform: 'scale(1.1)' } }} 
+              onClick={() => setMobileOpen(true)}
+            >
               <MenuIcon fontSize="large" />
             </IconButton>
           </Toolbar>
 
           {/* ================= MOBILE DRAWER ================= */}
-          <Drawer anchor="left" open={mobileOpen} onClose={() => setMobileOpen(false)}
+          <Drawer 
+            anchor="left" // 🔴 تم تثبيت الاتجاه ليكون من اليسار دائماً دون أي تغيير شرطي
+            open={mobileOpen} 
+            onClose={() => setMobileOpen(false)}
+            transitionDuration={400} 
             PaperProps={{ 
               sx: { 
-                background: 'rgba(8, 69, 112, 0.85)', 
-                backdropFilter: 'blur(20px)', 
+                background: 'rgba(8, 69, 112, 0.95)', 
+                backdropFilter: 'blur(25px)', 
                 width: 320, 
-                borderRight: `1px solid rgba(37,154,203,0.2)`,
-                boxShadow: '20px 0 50px rgba(0,0,0,0.5)'
+                borderRight: `1px solid rgba(37,154,203,0.3)`, // 🔴 تم تثبيت الخط الفاصل ليكون من جهة اليمين فقط ليغلق شكل القائمة
+                boxShadow: '25px 0 60px rgba(0,0,0,0.6)'
               } 
             }}>
 
             {mounted && isAuthenticated && user && (
-              <Box sx={{ p: 3, background: `linear-gradient(135deg, rgba(48,192,242,0.05), transparent)`, borderBottom: `1px solid rgba(255,255,255,0.05)` }}>
+              <Box sx={{ p: 3, background: `linear-gradient(135deg, rgba(48,192,242,0.08), transparent)`, borderBottom: `1px solid rgba(255,255,255,0.05)` }}>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                  <Avatar sx={{ width: 56, height: 56, background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, color: '#000', fontWeight: 900, fontSize: '1.4rem', boxShadow: `0 0 15px rgba(48,192,242,0.3)` }}>
+                  <Avatar sx={{ width: 56, height: 56, background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, color: '#000', fontWeight: 900, fontSize: '1.4rem', boxShadow: `0 0 20px rgba(48,192,242,0.4)` }}>
                     {user.firstName?.[0]}{user.lastName?.[0]}
                   </Avatar>
                   <Box>
@@ -402,7 +429,7 @@ export default function Navbar() {
               
               <ListItem disablePadding sx={{ mb: 1 }}>
                 <ListItemButton component={Link} href={`/${locale}`} onClick={() => setMobileOpen(false)}
-                  sx={{ borderRadius: 3, color: isActive(`/${locale}`) ? palette.primary : '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
+                  sx={{ borderRadius: 3, color: isActive(`/${locale}`) ? palette.primary : '#fff', transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': { background: 'rgba(255,255,255,0.08)', pl: 3.5 } }}>
                   <ListItemIcon sx={{ minWidth: 36, color: isActive(`/${locale}`) ? palette.primary : palette.textSec }}><HomeRounded /></ListItemIcon>
                   <ListItemText primary={t.home} primaryTypographyProps={{ fontWeight: isActive(`/${locale}`) ? 900 : 600, fontSize: '1rem' }} />
                 </ListItemButton>
@@ -410,7 +437,7 @@ export default function Navbar() {
 
               <ListItem disablePadding sx={{ mb: 1 }}>
                 <ListItemButton component={Link} href={`/${locale}/courses`} onClick={() => setMobileOpen(false)}
-                  sx={{ borderRadius: 3, color: isActive(`/${locale}/courses`) ? palette.primary : '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
+                  sx={{ borderRadius: 3, color: isActive(`/${locale}/courses`) ? palette.primary : '#fff', transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': { background: 'rgba(255,255,255,0.08)', pl: 3.5 } }}>
                   <ListItemIcon sx={{ minWidth: 36, color: isActive(`/${locale}/courses`) ? palette.primary : palette.textSec }}><MenuBook /></ListItemIcon>
                   <ListItemText primary={t.allCourses} primaryTypographyProps={{ fontWeight: isActive(`/${locale}/courses`) ? 900 : 600, fontSize: '1rem' }} />
                 </ListItemButton>
@@ -418,7 +445,7 @@ export default function Navbar() {
 
               <ListItem disablePadding sx={{ mb: 1 }}>
                 <ListItemButton component={Link} href={`/${locale}/packages`} onClick={() => setMobileOpen(false)}
-                  sx={{ borderRadius: 3, color: isActive(`/${locale}/packages`) ? palette.primary : '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
+                  sx={{ borderRadius: 3, color: isActive(`/${locale}/packages`) ? palette.primary : '#fff', transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': { background: 'rgba(255,255,255,0.08)', pl: 3.5 } }}>
                   <ListItemIcon sx={{ minWidth: 36, color: isActive(`/${locale}/packages`) ? palette.primary : palette.textSec }}><InventoryRounded /></ListItemIcon>
                   <ListItemText primary={t.packages} primaryTypographyProps={{ fontWeight: isActive(`/${locale}/packages`) ? 900 : 600, fontSize: '1rem' }} />
                 </ListItemButton>
@@ -426,7 +453,7 @@ export default function Navbar() {
 
               <ListItem disablePadding sx={{ mb: 1 }}>
                 <ListItemButton component="a" href="https://wa.me/201155242794" target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)}
-                  sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(37,211,102,0.1)', pl: 3 } }}>
+                  sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': { background: 'rgba(37,211,102,0.15)', pl: 3.5 } }}>
                   <ListItemIcon sx={{ minWidth: 36, color: '#25D366' }}><SupportAgentRounded /></ListItemIcon>
                   <ListItemText primary={t.support} primaryTypographyProps={{ fontWeight: 800, fontSize: '1rem' }} />
                 </ListItemButton>
@@ -438,7 +465,7 @@ export default function Navbar() {
                   
                   <ListItem disablePadding sx={{ mb: 1 }}>
                     <ListItemButton component={Link} href={`/${locale}/dashboard`} onClick={() => setMobileOpen(false)}
-                      sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
+                      sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': { background: 'rgba(255,255,255,0.08)', pl: 3.5 } }}>
                       <ListItemIcon sx={{ minWidth: 36, color: palette.primary }}><Dashboard /></ListItemIcon>
                       <ListItemText primary={t.dashboard} primaryTypographyProps={{ fontWeight: 800, fontSize: '1rem' }} />
                     </ListItemButton>
@@ -446,7 +473,7 @@ export default function Navbar() {
 
                   <ListItem disablePadding sx={{ mb: 1 }}>
                     <ListItemButton component={Link} href={`/${locale}/my-courses`} onClick={() => setMobileOpen(false)}
-                      sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
+                      sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': { background: 'rgba(255,255,255,0.08)', pl: 3.5 } }}>
                       <ListItemIcon sx={{ minWidth: 36, color: palette.textMain }}><School /></ListItemIcon>
                       <ListItemText primary={t.myCourses} primaryTypographyProps={{ fontWeight: 800, fontSize: '1rem' }} />
                     </ListItemButton>
@@ -454,7 +481,7 @@ export default function Navbar() {
 
                   <ListItem disablePadding sx={{ mb: 1 }}>
                     <ListItemButton component={Link} href={`/${locale}/my-packages`} onClick={() => setMobileOpen(false)}
-                      sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
+                      sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': { background: 'rgba(255,255,255,0.08)', pl: 3.5 } }}>
                       <ListItemIcon sx={{ minWidth: 36, color: palette.accent }}><LocalOfferRounded /></ListItemIcon>
                       <ListItemText primary={t.myPackages} primaryTypographyProps={{ fontWeight: 800, fontSize: '1rem' }} />
                     </ListItemButton>
@@ -463,7 +490,7 @@ export default function Navbar() {
                   {hasAffiliate && (
                     <ListItem disablePadding sx={{ mb: 1 }}>
                       <ListItemButton component={Link} href={`/${locale}/affiliate`} onClick={() => setMobileOpen(false)}
-                        sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(74,222,128,0.1)', pl: 3 } }}>
+                        sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': { background: 'rgba(74,222,128,0.15)', pl: 3.5 } }}>
                         <ListItemIcon sx={{ minWidth: 36, color: '#4ade80' }}><TrendingUp /></ListItemIcon>
                         <ListItemText primary={t.affiliate} primaryTypographyProps={{ fontWeight: 800, fontSize: '1rem' }} />
                       </ListItemButton>
@@ -474,14 +501,14 @@ export default function Navbar() {
                     <>
                       <ListItem disablePadding sx={{ mb: 1 }}>
                         <ListItemButton component={Link} href={`/${locale}/inspector`} onClick={() => setMobileOpen(false)}
-                          sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
+                          sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': { background: 'rgba(255,255,255,0.08)', pl: 3.5 } }}>
                           <ListItemIcon sx={{ minWidth: 36, color: palette.primaryHover }}><CoPresent /></ListItemIcon>
                           <ListItemText primary={t.inspector} primaryTypographyProps={{ fontWeight: 800, fontSize: '1rem' }} />
                         </ListItemButton>
                       </ListItem>
                       <ListItem disablePadding sx={{ mb: 1 }}>
                         <ListItemButton component={Link} href={`/${locale}/inspector/evaluations`} onClick={() => setMobileOpen(false)}
-                          sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
+                          sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': { background: 'rgba(255,255,255,0.08)', pl: 3.5 } }}>
                           <ListItemIcon sx={{ minWidth: 36, color: palette.primaryHover }}><Assignment /></ListItemIcon>
                           <ListItemText primary={t.evaluations} primaryTypographyProps={{ fontWeight: 800, fontSize: '1rem' }} />
                         </ListItemButton>
@@ -492,7 +519,7 @@ export default function Navbar() {
                   {isAdmin && (
                     <ListItem disablePadding sx={{ mb: 1 }}>
                       <ListItemButton component={Link} href={`/${locale}/admin`} onClick={() => setMobileOpen(false)}
-                        sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(168,85,247,0.1)', pl: 3 } }}>
+                        sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': { background: 'rgba(168,85,247,0.15)', pl: 3.5 } }}>
                         <ListItemIcon sx={{ minWidth: 36, color: '#a855f7' }}><AdminPanelSettings /></ListItemIcon>
                         <ListItemText primary={t.admin} primaryTypographyProps={{ fontWeight: 800, fontSize: '1rem' }} />
                       </ListItemButton>
@@ -502,7 +529,7 @@ export default function Navbar() {
                   {isManager && (
                     <ListItem disablePadding sx={{ mb: 1 }}>
                       <ListItemButton component={Link} href={`/${locale}/manager`} onClick={() => setMobileOpen(false)}
-                        sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(249,115,22,0.1)', pl: 3 } }}>
+                        sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': { background: 'rgba(249,115,22,0.15)', pl: 3.5 } }}>
                         <ListItemIcon sx={{ minWidth: 36, color: '#f97316' }}><ManageAccountsRounded /></ListItemIcon>
                         <ListItemText primary={t.manager} primaryTypographyProps={{ fontWeight: 800, fontSize: '1rem' }} />
                       </ListItemButton>
@@ -513,7 +540,7 @@ export default function Navbar() {
                   
                   <ListItem disablePadding sx={{ mb: 1 }}>
                     <ListItemButton component={Link} href={`/${locale}/my-certificates`} onClick={() => setMobileOpen(false)}
-                      sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
+                      sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': { background: 'rgba(255,255,255,0.08)', pl: 3.5 } }}>
                       <ListItemIcon sx={{ minWidth: 36, color: palette.primary }}><WorkspacePremium /></ListItemIcon>
                       <ListItemText primary={t.myCertificates} primaryTypographyProps={{ fontWeight: 800, fontSize: '1rem' }} />
                     </ListItemButton>
@@ -521,7 +548,7 @@ export default function Navbar() {
 
                   <ListItem disablePadding sx={{ mb: 1 }}>
                     <ListItemButton component={Link} href={`/${locale}/settings`} onClick={() => setMobileOpen(false)}
-                      sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.2s', '&:hover': { background: 'rgba(255,255,255,0.05)', pl: 3 } }}>
+                      sx={{ borderRadius: 3, color: '#fff', transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': { background: 'rgba(255,255,255,0.08)', pl: 3.5 } }}>
                       <ListItemIcon sx={{ minWidth: 36, color: palette.textSec }}><Settings /></ListItemIcon>
                       <ListItemText primary={t.settings} primaryTypographyProps={{ fontWeight: 800, fontSize: '1rem' }} />
                     </ListItemButton>
@@ -529,7 +556,7 @@ export default function Navbar() {
 
                   <ListItem disablePadding>
                     <ListItemButton onClick={() => { setMobileOpen(false); handleLogout(); }}
-                      sx={{ borderRadius: 3, color: palette.danger, transition: 'all 0.2s', '&:hover': { background: 'rgba(230,47,118,0.1)', pl: 3 } }}>
+                      sx={{ borderRadius: 3, color: palette.danger, transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': { background: 'rgba(230,47,118,0.15)', pl: 3.5 } }}>
                       <ListItemIcon sx={{ minWidth: 36, color: palette.danger }}><Logout /></ListItemIcon>
                       <ListItemText primary={t.logout} primaryTypographyProps={{ fontWeight: 900, fontSize: '1rem' }} />
                     </ListItemButton>
@@ -538,12 +565,12 @@ export default function Navbar() {
               ) : mounted && (
                 <Box sx={{ mt: 4, display: 'flex', flexDirection: 'column', gap: 2, px: 1 }}>
                   <Button component={Link} href={`/${locale}/login`} variant="outlined" fullWidth
-                    sx={{ py: 1.5, borderRadius: 3, borderColor: 'rgba(255,255,255,0.2)', color: '#fff', fontWeight: 900, fontSize: '1.05rem', transition: 'all 0.3s', '&:hover': { borderColor: palette.primary, color: palette.primary, background: 'rgba(48,192,242,0.05)' } }} 
+                    sx={{ py: 1.5, borderRadius: 3, borderColor: 'rgba(255,255,255,0.2)', color: '#fff', fontWeight: 900, fontSize: '1.05rem', transition: 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': { borderColor: palette.primary, color: palette.primary, background: 'rgba(48,192,242,0.08)', transform: 'translateY(-3px)' } }} 
                     onClick={() => setMobileOpen(false)}>
                     {t.login}
                   </Button>
                   <Button component={Link} href={`/${locale}/register`} variant="contained" fullWidth 
-                    sx={{ background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, color: '#000', fontWeight: 900, py: 1.5, borderRadius: 3, fontSize: '1.05rem', boxShadow: `0 4px 15px rgba(48,192,242,0.3)`, transition: 'all 0.3s', '&:hover': { background: `linear-gradient(135deg, ${palette.primaryHover}, ${palette.primary})`, boxShadow: `0 6px 20px rgba(48,192,242,0.5)` } }} 
+                    sx={{ background: `linear-gradient(135deg, ${palette.primary}, ${palette.border})`, color: '#000', fontWeight: 900, py: 1.5, borderRadius: 3, fontSize: '1.05rem', boxShadow: `0 4px 15px rgba(48,192,242,0.3)`, transition: 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)', '&:hover': { background: `linear-gradient(135deg, ${palette.primaryHover}, ${palette.primary})`, boxShadow: `0 8px 25px rgba(48,192,242,0.5)`, transform: 'translateY(-3px)' } }} 
                     onClick={() => setMobileOpen(false)}>
                     {t.register}
                   </Button>

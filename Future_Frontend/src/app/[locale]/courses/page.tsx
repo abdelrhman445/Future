@@ -481,6 +481,14 @@ export default function CoursesPage() {
                             <MenuBook sx={{ fontSize: 18, color: palette.primary }} />
                             {Number(course.totalLessons) || 0} {ar ? 'درس' : 'Lessons'}
                           </Box>
+                          
+                          {/* 🔴 خانة المدة الجديدة */}
+                          {(course as any).duration && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <AccessTime sx={{ fontSize: 18, color: palette.primary }} />
+                              {(course as any).duration}
+                            </Box>
+                          )}
                         </Box>
 
                         {/* Price + Commission */}
