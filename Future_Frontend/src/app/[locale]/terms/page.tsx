@@ -7,12 +7,17 @@ import {
 } from '@mui/material';
 import { 
   GavelRounded, SecurityRounded, CopyrightRounded, PaymentsRounded, 
-  HandshakeRounded, UpdateRounded, Facebook, Instagram, ArticleRounded,
+  HandshakeRounded, UpdateRounded, Facebook, ArticleRounded,
   ArrowForwardIosRounded, ArrowBackIosRounded
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
-
+import SvgIcon from '@mui/material/SvgIcon';
+const TiktokIcon = (props: any) => (
+  <SvgIcon {...props} viewBox="0 0 24 24">
+    <path d="M12.525.02c1.31-.02 2.61-.01 3.91.04.15 1.53.85 3.01 2.01 4.14 1.15 1.13 2.7 1.76 4.3 1.94v4.06c-1.39-.08-2.76-.5-3.92-1.22-.52-.33-.99-.74-1.38-1.2v7.1c0 3.32-2.18 6.27-5.32 7.15-3.15.88-6.52-.3-8.4-2.95-1.89-2.65-1.63-6.27.63-8.62 1.63-1.68 3.97-2.3 6.18-1.63v4.11c-.56-.16-1.16-.14-1.69.07-.54.21-.99.59-1.31 1.07-.31.48-.46 1.05-.41 1.62.05.57.3 1.1.72 1.52.42.41.97.68 1.55.77.58.08 1.17-.02 1.68-.3.51-.27.91-.71 1.15-1.23.24-.52.34-1.09.28-1.66V.02z" />
+  </SvgIcon>
+);
 // ================= THEME PALETTE =================
 const palette = {
   bg: '#050508', 
@@ -222,7 +227,7 @@ export default function TermsPage() {
               <Typography sx={{ color: palette.textSec, fontSize: '1rem', mb: 4, maxWidth: 500, mx: 'auto' }}>
                 {ar ? 'إذا كان لديك أي أسئلة بخصوص الشروط والأحكام، فريق الدعم القانوني متاح للرد على جميع استفساراتك.' : 'If you have any questions regarding the terms and conditions, our legal support team is available to answer your inquiries.'}
               </Typography>
-              <Box component="a" href="https://wa.me/201000000000" target="_blank" sx={{ display: 'inline-block', background: palette.primary, color: '#000', px: 4, py: 1.5, borderRadius: '50px', fontWeight: 800, textDecoration: 'none', transition: '0.3s', '&:hover': { background: palette.primaryHover, transform: 'translateY(-3px)', boxShadow: `0 10px 20px ${alpha(palette.primary, 0.3)}` } }}>
+              <Box component="a" href="https://wa.me/201155242794" target="_blank" sx={{ display: 'inline-block', background: palette.primary, color: '#000', px: 4, py: 1.5, borderRadius: '50px', fontWeight: 800, textDecoration: 'none', transition: '0.3s', '&:hover': { background: palette.primaryHover, transform: 'translateY(-3px)', boxShadow: `0 10px 20px ${alpha(palette.primary, 0.3)}` } }}>
                 {ar ? 'تواصل مع الدعم' : 'Contact Support'}
               </Box>
             </Card>
@@ -247,11 +252,11 @@ export default function TermsPage() {
               </Typography>
               
               <Stack direction="row" sx={{ gap: { xs: 4, sm: 6 } }}>
-                <IconButton component="a" href="https://facebook.com" target="_blank" sx={{ width: 56, height: 56, color: palette.textSec, bgcolor: alpha('#fff', 0.03), border: `1px solid ${alpha('#fff', 0.1)}`, '&:hover': { color: '#000', bgcolor: palette.primary, borderColor: palette.primary, transform: 'translateY(-5px)', boxShadow: `0 10px 20px ${alpha(palette.primary, 0.3)}` }, transition: 'all 0.3s' }}>
+                <IconButton component="a" href="https://www.facebook.com/share/1ChpQ7cxtQ/?mibextid=wwXIfr" target="_blank" sx={{ width: 56, height: 56, color: palette.textSec, bgcolor: alpha('#fff', 0.03), border: `1px solid ${alpha('#fff', 0.1)}`, '&:hover': { color: '#000', bgcolor: palette.primary, borderColor: palette.primary, transform: 'translateY(-5px)', boxShadow: `0 10px 20px ${alpha(palette.primary, 0.3)}` }, transition: 'all 0.3s' }}>
                   <Facebook sx={{ fontSize: 28 }} />
                 </IconButton>
-                <IconButton component="a" href="https://instagram.com" target="_blank" sx={{ width: 56, height: 56, color: palette.textSec, bgcolor: alpha('#fff', 0.03), border: `1px solid ${alpha('#fff', 0.1)}`, '&:hover': { color: '#000', bgcolor: palette.primary, borderColor: palette.primary, transform: 'translateY(-5px)', boxShadow: `0 10px 20px ${alpha(palette.primary, 0.3)}` }, transition: 'all 0.3s' }}>
-                  <Instagram sx={{ fontSize: 28 }} />
+                <IconButton component="a" href="https://www.tiktok.com/@future_academy.official?_r=1&_t=ZS-95PIcjlTq1B" target="_blank" sx={{ width: 56, height: 56, color: palette.textSec, bgcolor: alpha('#fff', 0.03), border: `1px solid ${alpha('#fff', 0.1)}`, '&:hover': { color: '#000', bgcolor: palette.primary, borderColor: palette.primary, transform: 'translateY(-5px)', boxShadow: `0 10px 20px ${alpha(palette.primary, 0.3)}` }, transition: 'all 0.3s' }}>
+                  <TiktokIcon sx={{ fontSize: 28 }} />
                 </IconButton>
               </Stack>
             </Grid>
@@ -292,7 +297,7 @@ export default function TermsPage() {
                 </Typography>
                 
                 <Box sx={{ mt: 2 }}>
-                  <Typography component="a" href="https://wa.me/201000000000" target="_blank" rel="noopener noreferrer" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1.5, background: alpha(palette.success, 0.1), color: palette.success, border: `1px solid ${alpha(palette.success, 0.3)}`, px: 3, py: 1.2, borderRadius: '50px', fontWeight: 800, fontSize: '0.95rem', transition: 'all 0.3s', textDecoration: 'none', '&:hover': { background: palette.success, color: '#fff', transform: 'translateY(-3px)', boxShadow: `0 8px 20px ${alpha(palette.success, 0.3)}` } }}>
+                  <Typography component="a" href="https://wa.me/201155242794" target="_blank" rel="noopener noreferrer" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1.5, background: alpha(palette.success, 0.1), color: palette.success, border: `1px solid ${alpha(palette.success, 0.3)}`, px: 3, py: 1.2, borderRadius: '50px', fontWeight: 800, fontSize: '0.95rem', transition: 'all 0.3s', textDecoration: 'none', '&:hover': { background: palette.success, color: '#fff', transform: 'translateY(-3px)', boxShadow: `0 8px 20px ${alpha(palette.success, 0.3)}` } }}>
                     <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'currentColor', boxShadow: `0 0 10px currentColor` }} />
                     {ar ? 'تواصل معنا' : 'Contact Us'}
                   </Typography>

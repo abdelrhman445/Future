@@ -10,13 +10,20 @@ import {
 import { 
   PlayCircle, School, TrendingUp, Star, Login, PersonAdd, CheckCircle, 
   RocketLaunchRounded, WorkspacePremiumRounded, LocalFireDepartmentRounded,
-  ExpandMoreRounded, Facebook, Instagram
+  ExpandMoreRounded, Facebook, 
+  
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import { coursesApi, adminApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
+import SvgIcon from '@mui/material/SvgIcon';
 
+const TiktokIcon = (props: any) => (
+  <SvgIcon {...props} viewBox="0 0 24 24">
+    <path d="M12.525.02c1.31-.02 2.61-.01 3.91.04.15 1.53.85 3.01 2.01 4.14 1.15 1.13 2.7 1.76 4.3 1.94v4.06c-1.39-.08-2.76-.5-3.92-1.22-.52-.33-.99-.74-1.38-1.2v7.1c0 3.32-2.18 6.27-5.32 7.15-3.15.88-6.52-.3-8.4-2.95-1.89-2.65-1.63-6.27.63-8.62 1.63-1.68 3.97-2.3 6.18-1.63v4.11c-.56-.16-1.16-.14-1.69.07-.54.21-.99.59-1.31 1.07-.31.48-.46 1.05-.41 1.62.05.57.3 1.1.72 1.52.42.41.97.68 1.55.77.58.08 1.17-.02 1.68-.3.51-.27.91-.71 1.15-1.23.24-.52.34-1.09.28-1.66V.02z" />
+  </SvgIcon>
+);
 // ================= THEME PALETTE =================
 const palette = {
   bg: '#050508', // Darker premium background
@@ -356,20 +363,29 @@ export default function HomePage() {
               
               {/* 🔴 تم توسيع المسافات بقوة باستخدام الـ gap */}
               <Stack direction="row" sx={{ gap: { xs: 4, sm: 6 } }}>
-                <IconButton component="a" href="https://facebook.com" target="_blank" sx={{ 
+                <IconButton component="a" href="https://www.facebook.com/share/1ChpQ7cxtQ/?mibextid=wwXIfr" target="_blank" sx={{ 
                   width: 56, height: 56, color: palette.textSec, bgcolor: alpha('#fff', 0.03), border: `1px solid ${alpha('#fff', 0.1)}`,
                   '&:hover': { color: '#000', bgcolor: palette.primary, borderColor: palette.primary, transform: 'translateY(-5px)', boxShadow: `0 10px 20px ${alpha(palette.primary, 0.3)}` }, 
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' 
                 }}>
                   <Facebook sx={{ fontSize: 28 }} />
                 </IconButton>
-                <IconButton component="a" href="https://instagram.com" target="_blank" sx={{ 
-                  width: 56, height: 56, color: palette.textSec, bgcolor: alpha('#fff', 0.03), border: `1px solid ${alpha('#fff', 0.1)}`,
-                  '&:hover': { color: '#000', bgcolor: palette.primary, borderColor: palette.primary, transform: 'translateY(-5px)', boxShadow: `0 10px 20px ${alpha(palette.primary, 0.3)}` }, 
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' 
-                }}>
-                  <Instagram sx={{ fontSize: 28 }} />
-                </IconButton>
+                <IconButton 
+  component="a" 
+  href="https://www.tiktok.com/@future_academy.official?_r=1&_t=ZS-95PIcjlTq1B"
+  target="_blank" 
+  sx={{ 
+    width: 56, 
+    height: 56, 
+    color: palette.textSec, 
+    bgcolor: alpha('#fff', 0.03), 
+    border: `1px solid ${alpha('#fff', 0.1)}`, 
+    '&:hover': { color: '#000', bgcolor: palette.primary, borderColor: palette.primary, transform: 'translateY(-5px)', boxShadow: `0 10px 20px ${alpha(palette.primary, 0.3)}` }, 
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' 
+  }}
+>
+  <TiktokIcon sx={{ fontSize: 28 }} />
+</IconButton>
               </Stack>
             </Grid>
 
@@ -416,7 +432,7 @@ export default function HomePage() {
                 <Box sx={{ mt: 2 }}>
                   <Typography 
                     component="a" 
-                    href="https://wa.me/201000000000" 
+                    href="https://wa.me/201155242794" 
                     target="_blank" 
                     rel="noopener noreferrer" 
                     sx={{ 
