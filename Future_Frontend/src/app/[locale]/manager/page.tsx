@@ -49,7 +49,6 @@ export default function ManagerDashboard() {
   // Modal States
   const [selectedUser, setSelectedUser] = useState<any>(null);
   
-  // 🔴 إضافة نوع التفعيل (كورس ولا باقة)
   const [grantType, setGrantType] = useState('COURSE'); // 'COURSE' or 'PACKAGE'
   
   const [courses, setCourses] = useState<any[]>([]);
@@ -57,7 +56,6 @@ export default function ManagerDashboard() {
   const [loadingItems, setLoadingItems] = useState(false);
   const [grantingId, setGrantingId] = useState<string | null>(null);
   
-  // لحفظ الكورسات/الباقات اللي اتفعلت في الجلسة الحالية عشان نعطل زرايرها
   const [grantedItems, setGrantedItems] = useState<string[]>([]);
 
   useEffect(() => {
@@ -68,18 +66,17 @@ export default function ManagerDashboard() {
     }
   }, [isAuthenticated, user, router, locale, ar]);
 
-  // 🔴 دالة جلب العناصر بناءً على التاب المحدد (الكورسات أو الباقات)
   const fetchItemsList = async (type: string) => {
     setLoadingItems(true);
     try {
       if (type === 'COURSE') {
         if (courses.length === 0) {
-          const res = await coursesApi.list();
+          const res = await coursesApi.list({ limit: 1000 });
           setCourses(res.data?.data?.courses || res.data?.courses || []);
         }
       } else {
         if (packages.length === 0) {
-          const res = await packagesApi.list();
+          const res = await packagesApi.list({ limit: 1000 } as any);
           setPackages(res.data?.data || res.data || []);
         }
       }
@@ -113,12 +110,11 @@ export default function ManagerDashboard() {
 
   const openGrantModal = (usr: any) => {
     setSelectedUser(usr);
-    setGrantedItems([]); // تصفير العناصر المتفعلة لما نفتح يوزر جديد
-    setGrantType('COURSE'); // الافتراضي كورسات
+    setGrantedItems([]); 
+    setGrantType('COURSE'); 
     fetchItemsList('COURSE');
   };
 
-  // 🔴 تغيير التاب (كورس/باقة)
   const handleTypeChange = (event: React.MouseEvent<HTMLElement>, newType: string) => {
     if (newType !== null) {
       setGrantType(newType);
@@ -126,7 +122,6 @@ export default function ManagerDashboard() {
     }
   };
 
-  // 🔴 دالة التفعيل الموحدة
   const handleGrantAccess = async (itemId: string) => {
     if (!selectedUser) return;
     setGrantingId(itemId);
@@ -139,7 +134,6 @@ export default function ManagerDashboard() {
         toast.success(ar ? `تم تفعيل الباقة واحتساب العمولات بنجاح! 🎉` : `Package unlocked and commissions calculated! 🎉`);
       }
       
-      // إضافة العنصر لقائمة المُفعلة عشان نعطل الزرار
       setGrantedItems((prev) => [...prev, itemId]);
       
     } catch (err: any) {
@@ -243,7 +237,7 @@ export default function ManagerDashboard() {
       {/* ================= GRANT ACCESS MODAL ================= */}
       <Dialog 
         open={Boolean(selectedUser)} onClose={() => !grantingId && setSelectedUser(null)}
-        PaperProps={{ sx: { background: `linear-gradient(180deg, ${palette.cardBg}, #000)`, backdropFilter: 'blur(20px)', border: `1px solid ${alpha(palette.border, 0.4)}`, borderRadius: 5, minWidth: { xs: '95%', sm: 500 }, p: 1, boxShadow: `0 30px 60px rgba(0,0,0,0.8)` } }}
+        PaperProps={{ sx: { background: `linear-gradient(180deg, ${palette.cardBg}, #000)`, backdropFilter: 'blur(20px)', border: `1px solid ${alpha(palette.border, 0.4)}`, borderRadius: 5, minWidth: { xs: '95%', sm: 550 }, p: 1, boxShadow: `0 30px 60px rgba(0,0,0,0.8)` } }}
       >
         <DialogTitle sx={{ color: '#fff', fontWeight: 900, display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 2 }}>
           {ar ? 'تفعيل اشتراك للمستخدم' : 'Grant Access to User'}
@@ -251,49 +245,64 @@ export default function ManagerDashboard() {
         </DialogTitle>
 
         <DialogContent sx={{ p: 2 }}>
-          <Box sx={{ mb: 3, p: 2, background: 'rgba(0,0,0,0.3)', borderRadius: 3, border: `1px dashed ${palette.primary}` }}>
+          <Box sx={{ mb: 4, p: 2.5, background: 'rgba(0,0,0,0.3)', borderRadius: 3, border: `1px dashed ${palette.primary}` }}>
             <Typography sx={{ color: palette.textSec, fontSize: '0.9rem', mb: 0.5 }}>{ar ? 'المستخدم المحدد:' : 'Selected User:'}</Typography>
             <Typography sx={{ color: '#fff', fontWeight: 800 }}>{selectedUser?.firstName} {selectedUser?.lastName} ({selectedUser?.email})</Typography>
           </Box>
 
-          {/* 🔴 اختيار نوع التفعيل (كورس أو باقة) */}
           <ToggleButtonGroup 
             color="primary" value={grantType} exclusive onChange={handleTypeChange} 
-            sx={{ mb: 3, width: '100%', '& .MuiToggleButton-root': { color: palette.textSec, borderColor: alpha(palette.border, 0.5), flex: 1, fontWeight: 'bold', '&.Mui-selected': { bgcolor: alpha(palette.primary, 0.2), color: palette.primary, borderColor: palette.primary } } }}
+            sx={{ mb: 4, width: '100%', gap: 2, display: 'flex', '& .MuiToggleButton-root': { border: `1px solid ${alpha(palette.border, 0.5)} !important`, borderRadius: '12px !important', color: palette.textSec, flex: 1, fontWeight: '800', py: 1.5, transition: '0.3s', '&.Mui-selected': { bgcolor: alpha(palette.primary, 0.15), color: palette.primary, borderColor: `${palette.primary} !important` }, '&:hover': { bgcolor: alpha(palette.primary, 0.05) } } }}
           >
-            <ToggleButton value="COURSE" sx={{ display: 'flex', gap: 1 }}>
+            <ToggleButton value="COURSE" sx={{ display: 'flex', gap: 1.5 }}>
               <SchoolRounded fontSize="small" /> {ar ? 'كورس مفرد' : 'Single Course'}
             </ToggleButton>
-            <ToggleButton value="PACKAGE" sx={{ display: 'flex', gap: 1 }}>
+            <ToggleButton value="PACKAGE" sx={{ display: 'flex', gap: 1.5 }}>
               <LocalOfferRounded fontSize="small" /> {ar ? 'باقة كاملة' : 'Full Package'}
             </ToggleButton>
           </ToggleButtonGroup>
 
           {loadingItems ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress sx={{ color: palette.primary }} /></Box>
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}><CircularProgress sx={{ color: palette.primary }} /></Box>
           ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxHeight: '45vh', overflowY: 'auto', pr: 1, '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-thumb': { background: alpha(palette.primary, 0.3), borderRadius: '10px' } }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: '45vh', overflowY: 'auto', pr: 1.5, '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-thumb': { background: alpha(palette.primary, 0.3), borderRadius: '10px' } }}>
               
               {/* عرض الكورسات */}
               {grantType === 'COURSE' && courses.map((c) => {
                 const isGranted = grantedItems.includes(c.id);
                 return (
-                  <Box key={c.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, background: 'rgba(255,255,255,0.03)', borderRadius: 3, border: `1px solid rgba(255,255,255,0.05)`, transition: '0.3s', '&:hover': { background: 'rgba(255,255,255,0.06)', borderColor: alpha(palette.primary, 0.3) } }}>
-                    <Box>
-                      <Typography sx={{ color: '#fff', fontWeight: 800, mb: 0.5 }}>{c.title}</Typography>
-                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                        <Chip label={c.packageType} size="small" sx={{ background: alpha(palette.primary, 0.1), color: palette.primary, fontSize: '0.7rem', height: 20 }} />
-                        <Typography sx={{ color: palette.success, fontWeight: 900, fontSize: '0.85rem' }}>${c.salePrice || c.originalPrice}</Typography>
+                 <Box key={c.id} sx={{ 
+                    ml: { xs: 0, sm: 3 }, // 🔴 0 للموبايل، 3 للكمبيوتر
+                    mr: { xs: 0, sm: 0.5 }, // 🔴 0 للموبايل، 0.5 للكمبيوتر
+                    mb: { xs: 2, sm: 0 }, 
+                    display: 'flex', 
+                    flexDirection: { xs: 'column', sm: 'row' }, 
+                    alignItems: { xs: 'flex-start', sm: 'center' }, 
+                    justifyContent: 'space-between', 
+                    gap: { xs: 2, sm: 0 }, 
+                    p: 2.5, 
+                    background: 'rgba(255,255,255,0.03)', 
+                    borderRadius: 3, 
+                    border: `1px solid rgba(255,255,255,0.05)`, 
+                    transition: '0.3s', 
+                    '&:hover': { background: 'rgba(255,255,255,0.06)', borderColor: alpha(palette.primary, 0.3) } 
+                  }}>
+                    <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                      <Typography sx={{ color: '#fff', fontWeight: 800, mb: 1, fontSize: '1.05rem' }}>{c.title}</Typography>
+                      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                        <Chip label={c.packageType} size="small" sx={{ background: alpha(palette.primary, 0.1), color: palette.primary, fontSize: '0.75rem', height: 24, fontWeight: 700 }} />
+                        <Typography sx={{ color: palette.success, fontWeight: 900, fontSize: '0.9rem' }}>${c.salePrice || c.originalPrice}</Typography>
                       </Box>
                     </Box>
                     <Button
                       onClick={() => handleGrantAccess(c.id)} disabled={grantingId === c.id || isGranted} variant="contained" size="small"
                       sx={{ 
-                        background: isGranted ? alpha(palette.success, 0.2) : `linear-gradient(135deg, ${palette.success}, #16a34a)`, color: isGranted ? palette.success : '#fff', fontWeight: 800, borderRadius: 2, textTransform: 'none', 
+                        width: { xs: '100%', sm: 'auto' }, // 🔴 الزرار واخد عرض الشاشة في الموبايل
+                        background: isGranted ? alpha(palette.success, 0.2) : `linear-gradient(135deg, ${palette.success}, #16a34a)`, color: isGranted ? palette.success : '#fff', fontWeight: 800, borderRadius: 2, px: 3, py: 1, textTransform: 'none', 
                         '&:hover': { transform: isGranted ? 'none' : 'scale(1.05)' }, '&.Mui-disabled': { background: isGranted ? alpha(palette.success, 0.2) : 'rgba(255,255,255,0.1)', color: isGranted ? palette.success : palette.textSec }
                       }}
                     >
-                      {grantingId === c.id ? <CircularProgress size={18} color="inherit" /> : isGranted ? (ar ? 'مُفعَّل ✅' : 'Unlocked ✅') : (ar ? 'تفعيل' : 'Unlock')}
+                      {grantingId === c.id ? <CircularProgress size={18} color="inherit" /> : isGranted ? (ar ? 'مُفعَّل ✅' : 'Unlocked ✅') : (ar ? 'تفعيل الكورس' : 'Unlock Course')}
                     </Button>
                   </Box>
                 );
@@ -303,21 +312,37 @@ export default function ManagerDashboard() {
               {grantType === 'PACKAGE' && packages.map((pkg) => {
                 const isGranted = grantedItems.includes(pkg.id);
                 return (
-                  <Box key={pkg.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, background: 'rgba(255,255,255,0.03)', borderRadius: 3, border: `1px solid rgba(255,255,255,0.05)`, transition: '0.3s', '&:hover': { background: 'rgba(255,255,255,0.06)', borderColor: alpha(palette.accent, 0.3) } }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar src={pkg.thumbnailUrl} variant="rounded" sx={{ width: 40, height: 40, border: `1px solid ${palette.border}` }} />
+                  <Box key={pkg.id} sx={{ 
+                    ml: { xs: 0, sm: 3 }, // 🔴 0 للموبايل، 3 للكمبيوتر
+                    mr: { xs: 0, sm: 0.5 }, // 🔴 0 للموبايل، 0.5 للكمبيوتر
+                    mb: { xs: 2, sm: 0 }, 
+                    display: 'flex', 
+                    flexDirection: { xs: 'column', sm: 'row' }, 
+                    alignItems: { xs: 'flex-start', sm: 'center' }, 
+                    justifyContent: 'space-between', 
+                    gap: { xs: 2, sm: 0 },
+                    p: 2.5, 
+                    background: 'rgba(255,255,255,0.03)', 
+                    borderRadius: 3, 
+                    border: `1px solid rgba(255,255,255,0.05)`, 
+                    transition: '0.3s', 
+                    '&:hover': { background: 'rgba(255,255,255,0.06)', borderColor: alpha(palette.accent, 0.3) } 
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, width: { xs: '100%', sm: 'auto' } }}>
+                      <Avatar src={pkg.thumbnailUrl} variant="rounded" sx={{ width: 50, height: 50, border: `1px solid ${palette.border}`, borderRadius: 2 }} />
                       <Box>
-                        <Typography sx={{ color: '#fff', fontWeight: 800, mb: 0.5 }}>{pkg.name}</Typography>
-                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                          <Typography sx={{ color: palette.textSec, fontSize: '0.8rem' }}>{pkg.coursesCount} {ar ? 'كورسات' : 'Courses'}</Typography>
-                          <Typography sx={{ color: palette.accent, fontWeight: 900, fontSize: '0.85rem' }}>${pkg.price}</Typography>
+                        <Typography sx={{ color: '#fff', fontWeight: 800, mb: 1, fontSize: '1.05rem' }}>{pkg.name}</Typography>
+                        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                          <Typography sx={{ color: palette.textSec, fontSize: '0.85rem', fontWeight: 600 }}>{pkg.coursesCount} {ar ? 'كورسات' : 'Courses'}</Typography>
+                          <Typography sx={{ color: palette.accent, fontWeight: 900, fontSize: '0.95rem' }}>${pkg.price}</Typography>
                         </Box>
                       </Box>
                     </Box>
                     <Button
                       onClick={() => handleGrantAccess(pkg.id)} disabled={grantingId === pkg.id || isGranted} variant="contained" size="small"
                       sx={{ 
-                        background: isGranted ? alpha(palette.success, 0.2) : `linear-gradient(135deg, ${palette.accent}, #d97706)`, color: isGranted ? palette.success : '#000', fontWeight: 900, borderRadius: 2, textTransform: 'none', 
+                        width: { xs: '100%', sm: 'auto' }, // 🔴 الزرار واخد عرض الشاشة في الموبايل
+                        background: isGranted ? alpha(palette.success, 0.2) : `linear-gradient(135deg, ${palette.accent}, #d97706)`, color: isGranted ? palette.success : '#000', fontWeight: 900, borderRadius: 2, px: 3, py: 1, textTransform: 'none', 
                         '&:hover': { transform: isGranted ? 'none' : 'scale(1.05)' }, '&.Mui-disabled': { background: isGranted ? alpha(palette.success, 0.2) : 'rgba(255,255,255,0.1)', color: isGranted ? palette.success : palette.textSec }
                       }}
                     >
@@ -328,7 +353,7 @@ export default function ManagerDashboard() {
               })}
 
               {((grantType === 'COURSE' && courses.length === 0) || (grantType === 'PACKAGE' && packages.length === 0)) && (
-                <Typography sx={{ color: palette.textSec, textAlign: 'center', py: 3 }}>
+                <Typography sx={{ color: palette.textSec, textAlign: 'center', py: 5, fontWeight: 600 }}>
                   {ar ? 'لا توجد بيانات متاحة' : 'No data available'}
                 </Typography>
               )}
