@@ -154,7 +154,7 @@ export default function CourseDetailPage() {
               {/* Stats Bar */}
               <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', color: palette.textSec, fontSize: '0.95rem', fontWeight: 600 }}>
                 {totalLessons > 0 && <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><MenuBook sx={{ fontSize: 20, color: palette.primary }} /> {totalLessons} {ar ? 'درس' : 'lessons'}</Box>}
-                {(course.duration ?? 0) > 0 && <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><AccessTime sx={{ fontSize: 20, color: palette.primary }} /> {Math.round(course.duration! / 60)} {ar ? 'ساعة' : 'hours'}</Box>}
+                {course.duration && <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><AccessTime sx={{ fontSize: 20, color: palette.primary }} /> {course.duration}</Box>}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Language sx={{ fontSize: 20, color: palette.primary }} /> {course.language === 'ar' ? 'العربية' : course.language}</Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><BarChart sx={{ fontSize: 20, color: palette.primary }} /> {course.level}</Box>
               </Box>
