@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Box, Button, TextField, Typography, Container, InputAdornment, Grid, Card, Checkbox, alpha } from '@mui/material';
-import { Email, Lock, Person, CardGiftcard } from '@mui/icons-material';
+import { Email, Lock, Person, CardGiftcard, Phone } from '@mui/icons-material'; // 🔴 إضافة أيقونة الهاتف
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,10 +24,12 @@ const palette = {
   danger: '#e62f76',
 };
 
+// 🔴 إضافة حقل رقم الهاتف في الـ Schema
 const schema = z.object({
   firstName: z.string().min(2),
   lastName: z.string().min(2),
   email: z.string().email(),
+  phone: z.string().optional(), // 🔴 الحقل الجديد
   password: z.string().min(8),
   referralCode: z.string().optional(),
 });
@@ -152,6 +154,17 @@ export default function RegisterPage() {
                 InputProps={{ startAdornment: <InputAdornment position="start"><Email sx={{ color: palette.textSec, fontSize: 20 }} /></InputAdornment> }} 
               />
 
+              {/* 🔴 حقل رقم الهاتف المضاف حديثًا */}
+              <TextField 
+                {...register('phone')} 
+                label={ar ? 'رقم الهاتف' : 'Phone Number'} 
+                type="tel" 
+                fullWidth 
+                error={!!errors.phone}
+                sx={textFieldStyles}
+                InputProps={{ startAdornment: <InputAdornment position="start"><Phone sx={{ color: palette.textSec, fontSize: 20 }} /></InputAdornment> }} 
+              />
+
               <TextField 
                 {...register('password')} 
                 label={ar ? 'كلمة المرور' : 'Password'} 
@@ -171,7 +184,7 @@ export default function RegisterPage() {
                 InputProps={{ startAdornment: <InputAdornment position="start"><CardGiftcard sx={{ color: palette.textSec, fontSize: 20 }} /></InputAdornment> }} 
               />
 
-              {/* 🔴 الجزء الجديد: الموافقة على الشروط والأحكام وسياسة الخصوصية */}
+              {/* الجزء الخاص: الموافقة على الشروط والأحكام وسياسة الخصوصية */}
               <Box sx={{ display: 'flex', alignItems: 'flex-start', mt: 1 }}>
                 <Checkbox
                   checked={agreedToTerms}
@@ -198,7 +211,7 @@ export default function RegisterPage() {
                 </Typography>
               </Box>
 
-              {/* 🔴 الزرار اتربط بالـ State، ومش هيشتغل غير لو علم على الموافقة */}
+              {/* الزرار اتربط بالـ State، ومش هيشتغل غير لو علم على الموافقة */}
               <Button 
                 type="submit" 
                 variant="contained" 

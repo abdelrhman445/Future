@@ -5,6 +5,7 @@ export interface User {
   firstName: string;
   lastName: string;
   role: 'ADMIN' | 'MANAGER' | 'AFFILIATE' | 'USER';
+  phone?: string;
   affiliateCode?: string;
   totalEarnings?: number;
   pendingEarnings?: number;
