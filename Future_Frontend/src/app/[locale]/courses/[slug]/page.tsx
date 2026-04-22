@@ -59,7 +59,7 @@ export default function CourseDetailPage() {
   // بيانات حسابات الدفع (تقدر تعدلها براحتك)
   const VODAFONE_NUMBER = "01021483238";
   const INSTAPAY_USER = "01021483238";
-  const WHATSAPP_NUMBER = "+201155242795"; // رقم الواتساب بالصيغة الدولية بدون أصفار في البداية
+  const WHATSAPP_NUMBER = "+201155242794"; // رقم الواتساب بالصيغة الدولية بدون أصفار في البداية
 
   useEffect(() => {
     coursesApi.getBySlug(slug)
